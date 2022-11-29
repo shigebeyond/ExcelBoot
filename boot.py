@@ -9,8 +9,12 @@ from pathlib import Path
 from pyutilb.util import *
 from pyutilb import log, ocr_youdao
 import ast
-from db import Db
 import pandas as pd
+from db import Db
+from shutil import copyfile
+from openpyxl import load_workbook
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, Protection
+import platform
 
 # 跳出循环的异常
 class BreakException(Exception):
@@ -39,6 +43,8 @@ class Boot(object):
             'include': self.include,
             'set_vars': self.set_vars,
             'print_vars': self.print_vars,
+            'start_edit': self.start_edit,
+            'end_edit': self.end_edit,
             'connect_db': self.connect_db,
             'query_db': self.query_db,
             'export_excel': self.export_excel,
@@ -245,6 +251,16 @@ class Boot(object):
         msg = replace_var(msg)  # 替换变量
         log.debug(msg)
 
+    # 开始编辑excel
+    def start_edit(self, file):
+        self.file = file
+        self.wb = load_workbook(file)
+
+    # 结束编辑excel -- 保存
+    def end_edit(self):
+        self.wb.save(self.file)
+        self.wb.close()
+
     # 连接db
     def connect_db(self, config):
         self.db = Db(config['ip'], config['port'], config['dbname'], config['user'], config['password'], config['echo_sql'])
@@ -272,25 +288,89 @@ class Boot(object):
             val = pd.DataFrame(val, columns=fields)
 
         # 行号
-        if 'rownum' in config and config['rownum']:
-            self.add_rownum_col(val)
+        if 'rowid' in config and config['rowid']:
+            self.add_id_col(val)
 
-        # 获得导出的文件
-        file = replace_var(config['file'])
+        # 变更列
+        if 'map' in config:
+            for col, func in config['map'].items():
+                self.map_col(val, col, func)
 
         # 导出
         # print(val)
-        print(f'导出excel: {file}')
-        if file.endswith('csv'):
-            val.to_csv(file)
+        print(f'导出excel: {self.file}')
+        if self.file.endswith('csv'):
+            val.to_csv(self.file)
         else:
             sheet = replace_var(config['sheet'])
-            writer = pd.ExcelWriter(file)
+            writer = pd.ExcelWriter(self.file)
             val.to_excel(writer, sheet, index=False)
 
     # 添加行号列
-    def add_rownum_col(df):
+    def add_id_col(self, df):
         df.insert(0, '序号', range(1, 1 + len(df)))
+
+    # 变更列
+    def map_col(self, df, col, func):
+        func = self[func]
+        df[col] = list(map(func, df[col]))
+
+    # 添加sheet链接
+    # https://www.cnblogs.com/pythonwl/p/14363360.html
+    def link_sheet(self, sheet, label=None):
+        if label == None:
+            label = sheet
+        return f'=HYPERLINK("#{sheet}!B2", "{label}")'
+
+    # 添加链接
+    def link(self, url, label):
+        return f'=HYPERLINK("{url}", "{label}")'
+
+    # 切换sheet
+    # https://blog.csdn.net/JunChen681/article/details/126053045
+    def set_sheet(self, sheet_name):
+        if sheet_name not in self.wb.sheetnames:
+            self.sheet = self.wb.create_sheet(sheet_name)
+        else:
+            self.sheet = self.wb[sheet_name]
+
+    # 迭代指定范围内的单元格
+    # todo：cell迭代搞新动作 for_cells(A1:B3):
+    # https://blog.csdn.net/weixin_48668114/article/details/126444151
+    def iterate_cells(self, bound):
+        # todo： 数字统一转 B1等
+        # 1 纯数字： 1,2 或 1,2:3,4
+        if ',' in bound:
+            bs = bound.split(':', 1)
+            if len(bs) == 2:
+                start = bs[0].split(',', 1)
+                end = bs[1].split(',', 1)
+                for row in range(int(start[0]), int(end[0])):
+                    for col in range(int(start[1]), int(end[1])):
+                        yield self.ws.cell(row, col)
+                return
+
+            start = bound.split(',', 1)
+            yield self.ws.cell(int(start[0]), int(start[1]))
+            return
+
+        # 2 字母+数字
+        # ws["A1:C3"]，ws["A:C"]，ws[1:3]
+        if ':' in bound:
+            for items in self.ws[bound]:
+                for cell in items:
+                    yield cell
+            return
+        # ws["A"], ws[1]
+        for item in self.ws[bound]:
+            yield item
+
+    # 填充颜色
+    # todo：cell迭代搞新动作 for_cells(A1:B3):
+    def fill(self, config):
+        for cell in self.iterate_cells(config['range']):
+            # 颜色argb选取: http://t.zoukankan.com/jytblog-p-8134744.html
+            cell.fill = PatternFill(fill_type='solid', start_color=config['color'])
 
 # cli入口
 def main():
