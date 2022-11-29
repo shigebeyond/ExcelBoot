@@ -1,0 +1,12 @@
+from .boot import Boot
+
+__author__ = "shigebeyond"
+__version__ = "1.0.5"
+__description__ = "ExcelBoot: make an easy way (yaml) to export excel"
+
+__all__ = [
+    "__author__",
+    "__version__",
+    "__description__",
+    "Boot",
+]

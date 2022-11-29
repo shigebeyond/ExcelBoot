@@ -1,0 +1,15 @@
+jkmvc.iml
+.idea/
+build/
+target/
+data/
+.gradle
+*.log
+*.pyc
+*.csv
+out/
+upload/
+logs/
+tmp/
+__pycache__/
+venv/
