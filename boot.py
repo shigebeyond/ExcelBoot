@@ -12,7 +12,7 @@ import ast
 import pandas as pd
 from db import Db
 from shutil import copyfile
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, Protection
 import platform
 
@@ -52,6 +52,9 @@ class Boot(object):
         set_var('boot', self)
         # 当前文件
         self.step_file = None
+        self.wb = None # book
+        self.ws = None # sheet
+        self.sheet = None # sheet名
 
     '''
     执行入口
@@ -254,12 +257,36 @@ class Boot(object):
     # 开始编辑excel
     def start_edit(self, file):
         self.file = file
-        self.wb = load_workbook(file)
+        self.reload_wb()
 
     # 结束编辑excel -- 保存
     def end_edit(self):
         self.wb.save(self.file)
         self.wb.close()
+        self.wb = None
+        self.ws = None
+
+    # 切换sheet
+    # https://blog.csdn.net/JunChen681/article/details/126053045
+    def switch_sheet(self, sheet):
+        self.sheet = sheet
+        self.reload_ws()
+
+    # 重载Workbook
+    def reload_wb(self):
+        if os.path.isfile(self.file):
+            self.wb = load_workbook(self.file)
+        else:
+            self.wb = Workbook()
+        self.sheet = None
+        self.ws = None
+
+    # 重载Worksheet
+    def reload_ws(self):
+        if self.sheet not in self.wb.sheetnames:
+            self.ws = self.wb.create_sheet(self.sheet)
+        else:
+            self.ws = self.wb[self.sheet]
 
     # 连接db
     def connect_db(self, config):
@@ -326,14 +353,6 @@ class Boot(object):
     def link(self, url, label):
         return f'=HYPERLINK("{url}", "{label}")'
 
-    # 切换sheet
-    # https://blog.csdn.net/JunChen681/article/details/126053045
-    def set_sheet(self, sheet_name):
-        if sheet_name not in self.wb.sheetnames:
-            self.sheet = self.wb.create_sheet(sheet_name)
-        else:
-            self.sheet = self.wb[sheet_name]
-
     # 迭代指定范围内的单元格
     # todo：cell迭代搞新动作 for_cells(A1:B3):
     # https://blog.csdn.net/weixin_48668114/article/details/126444151
@@ -341,36 +360,101 @@ class Boot(object):
         # todo： 数字统一转 B1等
         # 1 纯数字： 1,2 或 1,2:3,4
         if ',' in bound:
-            bs = bound.split(':', 1)
-            if len(bs) == 2:
-                start = bs[0].split(',', 1)
-                end = bs[1].split(',', 1)
-                for row in range(int(start[0]), int(end[0])):
-                    for col in range(int(start[1]), int(end[1])):
+            bs = self.split_bound(bound)
+            if len(bs) == 4: # 1.1 范围: 起始行, 起始列, 结束行, 结束列
+                for row in range(bs[0], bs[3] + 1):
+                    for col in range(bs[1], bs[4] + 1):
                         yield self.ws.cell(row, col)
                 return
 
-            start = bound.split(',', 1)
-            yield self.ws.cell(int(start[0]), int(start[1]))
+            # 1.2 单个单元格: 起始行, 起始列
+            yield self.ws.cell(bs[0], bs[1])
             return
 
         # 2 字母+数字
-        # ws["A1:C3"]，ws["A:C"]，ws[1:3]
+        # 2.1 范围 ws["A1:C3"], ws["A:C"], ws[1:3]
         if ':' in bound:
             for items in self.ws[bound]:
                 for cell in items:
                     yield cell
             return
-        # ws["A"], ws[1]
+
+        # 2.2 单个单元格 ws["A1"]
+        mat = re.match(r'\w+\d+', bound) # 匹配: 字母+数字
+        if mat != None:
+            yield self.ws[bound]
+            return
+
+        # 2.3 单列或单行 ws["A"], ws[1]
         for item in self.ws[bound]:
             yield item
 
-    # 填充颜色
-    # todo：cell迭代搞新动作 for_cells(A1:B3):
-    def fill(self, config):
-        for cell in self.iterate_cells(config['range']):
-            # 颜色argb选取: http://t.zoukankan.com/jytblog-p-8134744.html
-            cell.fill = PatternFill(fill_type='solid', start_color=config['color'])
+    # 分割范围
+    def split_bound(self, bound):
+        bs = bound.split(':', 1)
+        if len(bs) == 2:
+            start = bs[0].split(',', 1)
+            end = bs[1].split(',', 1)
+            # 起始行, 起始列, 结束行, 结束列
+            return [self.to_int(start[0]), self.to_int(start[1]), self.to_int(end[0], self.ws.max_row), self.to_int(end[1], self.ws.max_col)]
+
+        start = bound.split(',', 1)
+        # 起始行, 起始列
+        return [self.to_int(start[0]), self.to_int(start[1])]
+
+    # 转int, 有默认值
+    def to_int(self, str, default = 0):
+        if str == None or str == '':
+            return default
+
+        return int(str)
+
+    # 插入列
+    # :param param 起始列,插入列数
+    def insert_cols(self, param):
+        idx, amount = param.split(',')
+        self.ws.insert_cols(idx, amount)
+
+    # 插入行
+    # :param param 起始行,插入行数
+    def insert_rows(self, param):
+        idx, amount = param.split(',')
+        self.ws.insert_rows(idx, amount)
+
+    # 删除列
+    # :param param 起始列,删除列数
+    def remove_cols(self, param):
+        idx, amount = param.split(',')
+        self.ws.remove_cols(idx, amount)
+
+    # 删除行
+    # :param param 起始行,删除行数
+    def remove_rows(self, param):
+        idx, amount = param.split(',')
+        self.ws.remove_rows(idx, amount)
+
+    # 合并单元格
+    def merge_cells(self, param):
+        # self.wb.merge_cells(start_row=7, start_column=1, end_row=8, end_column=3)
+        if re.match(r'\d+,\d+:\d+,\d+', param):
+            start_row, start_column, end_row, end_column = param.replace(':', ',').split(',')
+            self.wb.merge_cells(start_row=start_row, start_column=start_column, end_row=end_row, end_column=end_column)
+            return
+
+        # self.wb.merge_cells("C1:D2")
+        return self.wb.merge_cells(param)
+
+    # 取消合并单元格
+    def unmerge_cells(self, param):
+        # self.wb.unmerge_cells(start_row=7, start_column=1, end_row=8, end_column=3)
+        if re.match(r'\d+,\d+:\d+,\d+', param):
+            start_row, start_column, end_row, end_column = param.replace(':', ',').split(',')
+            self.wb.unmerge_cells(start_row=start_row, start_column=start_column, end_row=end_row, end_column=end_column)
+            return
+
+        # self.wb.unmerge_cells("C1:D2")
+        return self.wb.unmerge_cells(param)
+
 
 # cli入口
 def main():
