@@ -155,7 +155,8 @@ class Boot(object):
         if n.isdigit():
             return int(n)
 
-        # 2 变量名, 必须是list类型
+        # 2 变量表达式, 必须是list/df.Series类型
+        n = "${" + n + "}"
         n = replace_var(n, False)
 
         # pd.Series == None 居然返回pd.Series, 无语, 转为list
@@ -338,9 +339,52 @@ class Boot(object):
         df.insert(0, '序号', range(1, 1 + len(df)))
 
     # 变更列
-    def map_col(self, df, col, func):
-        func = self[func]
-        df[col] = list(map(func, df[col]))
+    def map_col(self, df, col, expr):
+        if '(' in expr:  # 1 函数调用, 如 random_str(1)
+            if '(' in expr:
+                func = expr
+                params = []
+            else:
+                func, params = parse_func(expr)
+            r = []
+            for row in df.itertuples():
+                # 将[引用属性的参数]替换为属性值
+                params2 = self.replace_attr_params(params, row)
+                # 调用函数
+                v = self[func](*params2)
+                r.append(v)
+            df[col] = r
+            return
+
+        # 2 表达式：直接eval
+        attrnames = re.findall(r'\$([\w\d_]+)', expr) # 获得引用的属性名
+        expr = expr.replace('$', '')
+        r = []
+        for row in df.itertuples():
+            # 将[引用属性]作为eval的变量
+            vars = self.build_attr_vars(attrnames, row)
+            # eval
+            v = eval(expr, vars)
+            r.append(v)
+        df[col] = r
+
+    # 将[引用属性]作为eval的变量
+    def build_attr_vars(self, attrnames, row):
+        r = {}
+        for attrname in attrnames:
+            r[attrname] = getattr(row, attrname)
+        return r
+
+    # 将[引用属性的参数]替换为属性值
+    def replace_attr_params(self, params, row):
+        r = []
+        for i in range(0, len(params)):
+            v = params[i] # 参数
+            if v.startswith('$'): # 参数是属性引用
+                attrname = v[1:] # 属性名
+                v = getattr(row, attrname) # 参数=属性值
+            r.append(v)
+        return r
 
     # 添加sheet链接
     # https://www.cnblogs.com/pythonwl/p/14363360.html
