@@ -12,7 +12,9 @@ import ast
 import pandas as pd
 from db import Db
 from shutil import copyfile
+from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl import load_workbook, Workbook
+from openpyxl.worksheet.worksheet import Worksheet
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, Protection
 import platform
 from styleable_wrapper import StyleableWrapper
@@ -50,8 +52,10 @@ class Boot(object):
             'switch_sheet': self.switch_sheet,
             'connect_db': self.connect_db,
             'query_db': self.query_db,
-            'export_excel': self.export_excel,
+            'export_df': self.export_df,
+            'export_db': self.export_db,
             'map_cols': self.map_cols,
+            'cell_value': self.cell_value,
             'cells': self.cells,
             'cols': self.cols,
             'rows': self.rows,
@@ -64,8 +68,8 @@ class Boot(object):
         set_var('boot', self)
         # 当前文件
         self.step_file = None
-        self.wb = None # book
-        self.ws = None # sheet
+        self.wb: Workbook = None # book
+        self.ws: Worksheet = None # sheet
         self.sheet = None # sheet名
 
     '''
@@ -321,35 +325,43 @@ class Boot(object):
     def query_db(self, config):
         for var, sql in config.items():
             sql = replace_var(sql)
+            # 查询
             df = self.db.query_dataFrame(sql)
             set_var(var, df)
 
-    # 导出excel
-    def export_excel(self, config):
+    # 导出 DataFrame 数据
+    def export_df(self, config):
         if isinstance(config, str):
             var_df = config
             config = {}
         else:
             var_df = config["df"]
         # 获得导出的变量
-        val = self.get_var_DataFrame(var_df)
-        if len(val) == 0:
-            print(f"列表变量[{var_df}]为空, 不用导出excel")
+        df = self.get_var_DataFrame(var_df)
+        # 导出
+        self.do_export(df, var_df)
+
+    # 导出 sql 数据
+    def export_db(self, sql):
+        sql = replace_var(sql)
+        # 查询
+        df = self.db.query_dataFrame(sql)
+        # 导出
+        self.do_export(df, sql)
+
+    # 真正的导出
+    def do_export(self, df, var):
+        if 'select' in var or 'SELECT' in var:
+            type = "select sql"
+        else:
+            type = "列表变量"
+        if len(df) == 0:
+            print(f"{type}[{var}]为空, 不用导出excel")
             return
 
-        # 导出
-        # print(val)
-        print(f'导出excel: {self.file}')
-        if self.file.endswith('csv'):
-            val.to_csv(self.file)
-        else:
-            if 'start' in config:
-                startrow, startcol = self.split_bound(config['start'])
-            else:
-                startrow = 0
-                startcol = 0
-            writer = pd.ExcelWriter(self.file)
-            val.to_excel(writer, self.sheet, index=False, startrow=startrow, startcol=startcol)
+        # 导出 df
+        for row in dataframe_to_rows(df, index=False, header=True):
+            self.ws.append(row)
 
     # 获得指定变量, 并保证是DataFrame类型
     def get_var_DataFrame(self, var):
@@ -377,6 +389,13 @@ class Boot(object):
         # 逐列转换
         for col, expr in cols.items():
             mapper.map(col, expr)
+
+    # 设置单元格的值
+    def cell_value(self, config):
+        for bound, value in config.items():
+            if isinstance(value, str):
+                value = replace_var(value)
+            self.ws[bound].value = value
 
     # 循环rows, 如 rows(1:3)
     # :param styles 每个迭代中要应用的样式
@@ -517,7 +536,7 @@ class Boot(object):
     # :param param 起始行,插入行数
     def insert_rows(self, param):
         idx, amount = param.split(',')
-        self.ws.insert_rows(idx, amount)
+        self.ws.insert_rows(int(idx), int(amount))
 
     # 删除列
     # :param param 起始列,删除列数

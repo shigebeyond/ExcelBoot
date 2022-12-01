@@ -21,25 +21,30 @@ class DfColMapper(object):
 
     # 执行列表达式: 解析与调用函数
     def parse_and_call_col_func(self, col, expr):
+        # 1 解析函数与参数
         if '(' in expr:
             func, params = parse_func(expr)
         else:
             func = expr
             params = []
 
-        func = getattr(self, func)
-        # add_id/rm函数单独处理
-        if func.__name__ == 'rm' or func.__name__ == 'add_id':
-            func(col)
+        # 2 调用函数
+        # 2.1 add_id/rm函数单独处理
+        if func == 'rm':
+            self.rm(col)
+            return
+        if func == 'add_id':
+            self.add_id(col)
             return
 
-        # 逐行执行函数, 来拼接列的每个值
+        # 2.2 调用系统函数
+        # 逐行调用函数, 来拼接列的每个值
         r = []
         for row in self.df.itertuples():
             # 将[引用属性的参数]替换为属性值
             params2 = self.replace_attr_params(params, row)
-            # 调用函数
-            v = func(*params2)
+            # 调用系统函数
+            v = call_func(func, params2)
             r.append(v)
         self.df[col] = r
 
@@ -81,7 +86,6 @@ class DfColMapper(object):
             r[attrname] = getattr(row, attrname)
         return r
 
-    # -------------------- 变换单值的函数 ----------------------
     # 添加行号列: 需要单独调用
     def add_id(self, col):
         self.df.insert(0, col, range(1, 1 + len(self.df)))
@@ -90,14 +94,4 @@ class DfColMapper(object):
     def rm(self, col):
         del self.df[col]
 
-    # 添加sheet链接
-    # https://www.cnblogs.com/pythonwl/p/14363360.html
-    def link_sheet(self, sheet, label=None):
-        if label == None:
-            label = sheet
-        return f'=HYPERLINK("#{sheet}!B2", "{label}")'
-
-    # 添加链接
-    def link(self, label, url):
-        return f'=HYPERLINK("{url}", "{label}")'
 
