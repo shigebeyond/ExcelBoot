@@ -1,0 +1,42 @@
+# 连接db
+- connect_db:
+    ip: 192.168.62.200
+    port: 3306
+    dbname: test
+    user: root
+    password: root
+    echo_sql: true
+# 开始编辑excel
+#- start_edit: data/test数据结构.csv
+- start_edit: data/test数据结构.xlsx
+# 切换sheet
+- switch_sheet: 目录
+# 查sql, 结果放到变量tables中
+- query_db:
+    tables: >
+        SELECT
+            TABLE_COMMENT as 表注释,
+            TABLE_NAME as 表名
+        FROM
+            information_schema. TABLES
+        WHERE
+            TABLE_SCHEMA = 'test'
+# 转换列
+- map_cols(tables):
+      序号: add_id() # 加行号
+      搜索: link(链接, http://baidu.com?wd=$表名) # url链接
+      表链接: link_sheet($表名) # sheet链接
+# 将tables变量值导出到excel
+- export_excel: tables
+# 每个表插入sheet
+- for(tables[表名]):
+      - switch_sheet: $for_v
+# 切回来
+- switch_sheet: 目录
+# 插入3行
+#- insert_rows: 0, 3
+# 遍历cell设置样式
+- cells(A1:B3):
+    fill: red
+# 结束编辑excel（保存）
+- end_edit:

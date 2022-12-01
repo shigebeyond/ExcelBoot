@@ -15,6 +15,8 @@ from shutil import copyfile
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, Protection
 import platform
+from styleable_wrapper import StyleableWrapper
+from df_col_mapper import DfColMapper
 
 # 跳出循环的异常
 class BreakException(Exception):
@@ -45,9 +47,17 @@ class Boot(object):
             'print_vars': self.print_vars,
             'start_edit': self.start_edit,
             'end_edit': self.end_edit,
+            'switch_sheet': self.switch_sheet,
             'connect_db': self.connect_db,
             'query_db': self.query_db,
             'export_excel': self.export_excel,
+            'map_cols': self.map_cols,
+            'cells': self.cells,
+            'insert_rows': self.insert_rows,
+            'remove_cols': self.remove_cols,
+            'remove_rows': self.remove_rows,
+            'merge_cells': self.merge_cells,
+            'unmerge_cells': self.unmerge_cells,
         }
         set_var('boot', self)
         # 当前文件
@@ -127,18 +137,22 @@ class Boot(object):
     :param param 参数
     '''
     def run_action(self, action, param):
-        if 'for(' in action:
-            n = self.parse_for_n(action)
-            self.do_for(param, n)
-            return
+        log.debug(f"handle action: {action}={param}")
+
+        is_for_action = '(' in action # 是否循环动作
+        if is_for_action: # 解析循环动作
+            action, params = parse_func(action)
+            n = params[0]
 
         if action not in self.actions:
             raise Exception(f'Invalid action: [{action}]')
 
         # 调用动作对应的函数
-        log.debug(f"handle action: {action}={param}")
         func = self.actions[action]
-        func(param)
+        if is_for_action: # 循环动作: 多加了个参数-循环变量n
+            func(param, n)
+        else:
+            func(param)
 
     # --------- 动作处理的函数 --------
     # 当前url
@@ -148,36 +162,41 @@ class Boot(object):
     #         return None
     #     return self.driver.current_url
 
-    # 解析动作名中的for(n)中的n
-    def parse_for_n(self, action):
-        n = action[4:-1]
+    # 解析动作名for(n)中的n: 或数字或列表
+    def parse_for_n(self, n):
+        if n == None or n == '':
+            return None
+
         # 1 数字
         if n.isdigit():
             return int(n)
 
-        # 2 变量表达式, 必须是list/df.Series类型
-        n = "${" + n + "}"
-        n = replace_var(n, False)
+        # 2 变量表达式, 必须是int/list/df.Series类型
+        expr = "${" + n + "}"
+        n = replace_var(expr, False)
 
-        # pd.Series == None 居然返回pd.Series, 无语, 转为list
+        # fix bug: pd.Series == None 居然返回pd.Series
         if isinstance(n, pd.Series):
-            return list(n)
+            return n
         if n == None or not (isinstance(n, list) or isinstance(n, int)):
             raise Exception(f'Variable in for({n}) parentheses must be int or list or pd.Series type')
         return n
 
     # for循环
     # :param steps 每个迭代中要执行的步骤
-    # :param n 循环次数/循环的列表
+    # :param n 循环次数/循环列表变量名
     def do_for(self, steps, n = None):
+        n = self.parse_for_n(n)
         label = f"for({n})"
         # 循环次数
-        if n == None:
+        # fix bug: pd.Series == None 居然返回pd.Series
+        n_null = (not isinstance(n, pd.Series)) and n == None
+        if n_null:
             n = sys.maxsize # 最大int，等于无限循环次数
             label = f"for(∞)"
         # 循环的列表值
         items = None
-        if isinstance(n, list):
+        if isinstance(n, list) or isinstance(n, pd.Series):
             items = n
             n = len(items)
         log.debug(f"-- For loop start: {label} -- ")
@@ -188,7 +207,7 @@ class Boot(object):
                 # i+1表示迭代次数比较容易理解
                 log.debug(f"{i+1}th iteration")
                 set_var('for_i', i+1) # 更新索引
-                if items == None:
+                if n_null:
                     v = None
                 else:
                     v = items[i]
@@ -257,11 +276,11 @@ class Boot(object):
 
     # 开始编辑excel
     def start_edit(self, file):
-        self.file = file
+        self.file = replace_var(file)
         self.reload_wb()
 
     # 结束编辑excel -- 保存
-    def end_edit(self):
+    def end_edit(self, _):
         self.wb.save(self.file)
         self.wb.close()
         self.wb = None
@@ -270,15 +289,18 @@ class Boot(object):
     # 切换sheet
     # https://blog.csdn.net/JunChen681/article/details/126053045
     def switch_sheet(self, sheet):
-        self.sheet = sheet
+        self.sheet = replace_var(sheet)
         self.reload_ws()
 
     # 重载Workbook
     def reload_wb(self):
+        self.wb = Workbook()
+        '''
         if os.path.isfile(self.file):
             self.wb = load_workbook(self.file)
         else:
             self.wb = Workbook()
+        '''
         self.sheet = None
         self.ws = None
 
@@ -302,27 +324,16 @@ class Boot(object):
 
     # 导出excel
     def export_excel(self, config):
+        if isinstance(config, str):
+            var_df = config
+            config = {}
+        else:
+            var_df = config["df"]
         # 获得导出的变量
-        var = config['var']
-        val = get_var(var)
-        # list转DataFrame
-        if not isinstance(val, pd.DataFrame):
-            if not isinstance(val, list):
-                raise Exception(f"变量[{var}]值不是DataFrame或list: {val}")
-            if len(val) == 0:
-                print(f"列表变量[{var}]为空, 不用导出excel")
-                return
-            fields = val[0].keys()
-            val = pd.DataFrame(val, columns=fields)
-
-        # 行号
-        if 'rowid' in config and config['rowid']:
-            self.add_id_col(val)
-
-        # 变更列
-        if 'map' in config:
-            for col, func in config['map'].items():
-                self.map_col(val, col, func)
+        val = self.get_var_DataFrame(var_df)
+        if len(val) == 0:
+            print(f"列表变量[{var_df}]为空, 不用导出excel")
+            return
 
         # 导出
         # print(val)
@@ -330,79 +341,75 @@ class Boot(object):
         if self.file.endswith('csv'):
             val.to_csv(self.file)
         else:
-            sheet = replace_var(config['sheet'])
-            writer = pd.ExcelWriter(self.file)
-            val.to_excel(writer, sheet, index=False)
-
-    # 添加行号列
-    def add_id_col(self, df):
-        df.insert(0, '序号', range(1, 1 + len(df)))
-
-    # 变更列
-    def map_col(self, df, col, expr):
-        if '(' in expr:  # 1 函数调用, 如 random_str(1)
-            if '(' in expr:
-                func = expr
-                params = []
+            if 'start' in config:
+                startrow, startcol = self.split_bound(config['start'])
             else:
-                func, params = parse_func(expr)
-            r = []
-            for row in df.itertuples():
-                # 将[引用属性的参数]替换为属性值
-                params2 = self.replace_attr_params(params, row)
-                # 调用函数
-                v = self[func](*params2)
-                r.append(v)
-            df[col] = r
-            return
+                startrow = 0
+                startcol = 0
+            writer = pd.ExcelWriter(self.file)
+            val.to_excel(writer, self.sheet, index=False, startrow=startrow, startcol=startcol)
 
-        # 2 表达式：直接eval
-        attrnames = re.findall(r'\$([\w\d_]+)', expr) # 获得引用的属性名
-        expr = expr.replace('$', '')
-        r = []
-        for row in df.itertuples():
-            # 将[引用属性]作为eval的变量
-            vars = self.build_attr_vars(attrnames, row)
-            # eval
-            v = eval(expr, vars)
-            r.append(v)
-        df[col] = r
+    # 获得指定变量, 并保证是DataFrame类型
+    def get_var_DataFrame(self, var):
+        val = get_var(var)
+        # 检查类型
+        if not isinstance(val, pd.DataFrame):
+            if not isinstance(val, list):
+                raise Exception(f"变量[{var}]值不是DataFrame或list: {val}")
+            # list转DataFrame
+            if len(val) == 0: # 空
+                val = pd.DataFrame()
+            else:
+                fields = val[0].keys()
+                val = pd.DataFrame(val, columns=fields)
+            # 回写变量
+            set_var(var, val)
+        return val
 
-    # 将[引用属性]作为eval的变量
-    def build_attr_vars(self, attrnames, row):
-        r = {}
-        for attrname in attrnames:
-            r[attrname] = getattr(row, attrname)
-        return r
+    # df列变换
+    def map_cols(self, cols, var_df):
+        # 获得df
+        df = self.get_var_DataFrame(var_df)
+        # 构建df列变换器
+        mapper = DfColMapper(df)
+        # 逐列转换
+        for col, expr in cols.items():
+            mapper.map(col, expr)
 
-    # 将[引用属性的参数]替换为属性值
-    def replace_attr_params(self, params, row):
-        r = []
-        for i in range(0, len(params)):
-            v = params[i] # 参数
-            if v.startswith('$'): # 参数是属性引用
-                attrname = v[1:] # 属性名
-                v = getattr(row, attrname) # 参数=属性值
-            r.append(v)
-        return r
-
-    # 添加sheet链接
-    # https://www.cnblogs.com/pythonwl/p/14363360.html
-    def link_sheet(self, sheet, label=None):
-        if label == None:
-            label = sheet
-        return f'=HYPERLINK("#{sheet}!B2", "{label}")'
-
-    # 添加链接
-    def link(self, url, label):
-        return f'=HYPERLINK("{url}", "{label}")'
+    # 循环cells, 如 cells(A1:B3)
+    # :param steps 每个迭代中要执行的步骤
+    # :param bound 范围
+    def cells(self, styles, bound):
+        label = f"for cells({bound})"
+        # 循环的cell
+        log.debug(f"-- For cells loop start: {label} -- ")
+        last_i = get_var('for_i', False) # 旧的索引
+        last_v = get_var('for_v', False) # 旧的元素
+        try:
+            i = 0
+            for cell in self.iterate_cells(bound):
+                # i+1表示迭代次数比较容易理解
+                log.debug(f"{i+1}th iteration")
+                set_var('for_i', i+1) # 更新索引
+                set_var('for_v', cell) # 更新元素
+                StyleableWrapper(cell).use_styles(styles) # 应用样式
+        except BreakException as e:  # 跳出循环
+            log.debug(f"-- For cells loop break: {label}, break condition: {e.condition} -- ")
+        else:
+            log.debug(f"-- For cells loop finish: {label} -- ")
+        finally:
+            set_var('for_i', last_i) # 恢复索引
+            set_var('for_v', last_v) # 恢复元素
 
     # 迭代指定范围内的单元格
-    # todo：cell迭代搞新动作 for_cells(A1:B3):
     # https://blog.csdn.net/weixin_48668114/article/details/126444151
     def iterate_cells(self, bound):
-        # todo： 数字统一转 B1等
-        # 1 纯数字： 1,2 或 1,2:3,4
+        # 简单检查范围格式: 字母大小写都可以
+        if re.match(r'[\w+\d:]+', bound) == None: # 匹配： 字母数字:
+            if re.match(r'[\d,:]+', bound) == None:  # 匹配： 数字,:
+                raise Exception('无效范围: ' + bound)
+
+        # 1 纯数字: 如 1,2 或 1,2:3,4
         if ',' in bound:
             bs = self.split_bound(bound)
             if len(bs) == 4: # 1.1 范围: 起始行, 起始列, 结束行, 结束列
@@ -446,8 +453,8 @@ class Boot(object):
         # 起始行, 起始列
         return [self.to_int(start[0]), self.to_int(start[1])]
 
-    # 转int, 有默认值
-    def to_int(self, str, default = 0):
+    # 转int, 有默认值(行号、列号从1开始)
+    def to_int(self, str, default = 1):
         if str == None or str == '':
             return default
 
