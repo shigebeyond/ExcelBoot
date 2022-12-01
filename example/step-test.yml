@@ -36,7 +36,15 @@
 # 插入3行
 #- insert_rows: 0, 3
 # 遍历cell设置样式
-- cells(A1:B3):
+- cells(A1:B2):
     fill: red
+# 遍历col设置样式
+- cols(D:E):
+    fill: blue
+    width: 40
+# 遍历row设置样式
+- rows(4:5):
+    fill: green
+    height: 40
 # 结束编辑excel（保存）
 - end_edit:

@@ -53,6 +53,8 @@ class Boot(object):
             'export_excel': self.export_excel,
             'map_cols': self.map_cols,
             'cells': self.cells,
+            'cols': self.cols,
+            'rows': self.rows,
             'insert_rows': self.insert_rows,
             'remove_cols': self.remove_cols,
             'remove_rows': self.remove_rows,
@@ -199,7 +201,7 @@ class Boot(object):
         if isinstance(n, list) or isinstance(n, pd.Series):
             items = n
             n = len(items)
-        log.debug(f"-- For loop start: {label} -- ")
+        log.debug(f"-- Loop start: {label} -- ")
         last_i = get_var('for_i', False) # 旧的索引
         last_v = get_var('for_v', False) # 旧的元素
         try:
@@ -214,9 +216,9 @@ class Boot(object):
                 set_var('for_v', v) # 更新元素
                 self.run_steps(steps)
         except BreakException as e:  # 跳出循环
-            log.debug(f"-- For loop break: {label}, break condition: {e.condition} -- ")
+            log.debug(f"-- Loop break: {label}, break condition: {e.condition} -- ")
         else:
-            log.debug(f"-- For loop finish: {label} -- ")
+            log.debug(f"-- Loop finish: {label} -- ")
         finally:
             set_var('for_i', last_i) # 恢复索引
             set_var('for_v', last_v) # 恢复元素
@@ -376,30 +378,75 @@ class Boot(object):
         for col, expr in cols.items():
             mapper.map(col, expr)
 
+    # 循环rows, 如 rows(1:3)
+    # :param styles 每个迭代中要应用的样式
+    # :param bound 范围
+    def rows(self, styles, bound):
+        self.do_for_styleable(styles, self.iterate_rows(bound), f"rows({bound})")
+
+    # 循环cols, 如 cols(A:B)
+    # :param styles 每个迭代中要应用的样式
+    # :param bound 范围
+    def cols(self, styles, bound):
+        self.do_for_styleable(styles, self.iterate_cols(bound), f"cols({bound})")
+
     # 循环cells, 如 cells(A1:B3)
-    # :param steps 每个迭代中要执行的步骤
+    # :param styles 每个迭代中要应用的样式
     # :param bound 范围
     def cells(self, styles, bound):
-        label = f"for cells({bound})"
-        # 循环的cell
-        log.debug(f"-- For cells loop start: {label} -- ")
-        last_i = get_var('for_i', False) # 旧的索引
-        last_v = get_var('for_v', False) # 旧的元素
-        try:
-            i = 0
-            for cell in self.iterate_cells(bound):
-                # i+1表示迭代次数比较容易理解
-                log.debug(f"{i+1}th iteration")
-                set_var('for_i', i+1) # 更新索引
-                set_var('for_v', cell) # 更新元素
-                StyleableWrapper(cell).use_styles(styles) # 应用样式
-        except BreakException as e:  # 跳出循环
-            log.debug(f"-- For cells loop break: {label}, break condition: {e.condition} -- ")
-        else:
-            log.debug(f"-- For cells loop finish: {label} -- ")
-        finally:
-            set_var('for_i', last_i) # 恢复索引
-            set_var('for_v', last_v) # 恢复元素
+        self.do_for_styleable(styles, self.iterate_cells(bound), f"cells({bound})")
+
+    # 循环对象应用样式
+    def do_for_styleable(self, styles, objs, label):
+        log.debug(f"-- Loop start: {label} -- ")
+        for obj in objs:
+            StyleableWrapper(obj).use_styles(styles)  # 应用样式
+        log.debug(f"-- Loop finish: {label} -- ")
+
+    # 迭代指定范围内的行
+    def iterate_rows(self, bound):
+        # return map(lambda row: self.ws.row_dimensions[row], self.build_row_range(bound))
+        for row in self.build_row_range(bound):
+            yield self.ws.row_dimensions[row]
+
+    # 迭代指定范围内的列
+    def iterate_cols(self, bound):
+        for col in self.build_col_range(bound):
+            yield self.ws.column_dimensions[col]
+
+    # 构建行范围
+    # :param bound 如 1:3
+    def build_row_range(self, bound):
+        # 1 两值
+        if ':' in bound:
+            # 分割开始值+结束值
+            start, end = bound.split(':')
+            return range(int(start), int(end) + 1)
+
+        # 2 单值
+        return [int(bound)]
+
+    # 列顺序汇总
+    Col_Idx = 'ABCDEFGHIGKLMNOPQRSTUVWXYZ'
+
+    # 构建列范围
+    # :param bound 如 A:B
+    def build_col_range(self, bound):
+        bound = bound.upper() # 转大写
+        # 1 两值
+        if ':' in bound:
+            # 分割开始值+结束值
+            start, end = bound.split(':')
+            # 获得开始索引+结束索引
+            start = Boot.Col_Idx.index(start)
+            end = Boot.Col_Idx.index(end)
+            # 构建yield迭代器
+            for i in range(start, end + 1):
+                yield Boot.Col_Idx[i]
+            return
+
+        # 2 单值
+        return [bound]
 
     # 迭代指定范围内的单元格
     # https://blog.csdn.net/weixin_48668114/article/details/126444151
