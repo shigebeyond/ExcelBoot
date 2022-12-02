@@ -1,24 +1,17 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import time
-import sys
-import os
 import fnmatch
-from pathlib import Path
 from pyutilb.util import *
-from pyutilb import log, ocr_youdao
-import ast
+from pyutilb import log
 import pandas as pd
-from db import Db
-from shutil import copyfile
 from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl import load_workbook, Workbook
+from openpyxl.utils.cell import column_index_from_string, get_column_letter
+from openpyxl import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
-from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, Protection
-import platform
-from styleable_wrapper import StyleableWrapper
-from df_col_mapper import DfColMapper
+from ExcelBoot.db import Db
+from ExcelBoot.styleable_wrapper import StyleableWrapper
+from ExcelBoot.df_col_mapper import DfColMapper
 
 # 跳出循环的异常
 class BreakException(Exception):
@@ -436,6 +429,11 @@ class Boot(object):
     # 构建行范围
     # :param bound 如 1:3
     def build_row_range(self, bound):
+        mat1 = re.match(r'\d+', bound)
+        mat2 = re.match(r'\d+:\d+', bound)
+        if mat1 == None and mat2 == None:
+            raise Exception("无效行范围: " + range)
+
         # 1 两值
         if ':' in bound:
             # 分割开始值+结束值
@@ -445,64 +443,64 @@ class Boot(object):
         # 2 单值
         return [int(bound)]
 
-    # 列顺序汇总
-    Col_Idx = 'ABCDEFGHIGKLMNOPQRSTUVWXYZ'
-
     # 构建列范围
     # :param bound 如 A:B
     def build_col_range(self, bound):
         bound = bound.upper() # 转大写
+        mat1 = re.match(r'\w+', bound)
+        mat2 = re.match(r'\w+:\w+', bound)
+        if mat1 == None and mat2 == None:
+            raise Exception("无效列范围: " + range)
+
         # 1 两值
         if ':' in bound:
             # 分割开始值+结束值
             start, end = bound.split(':')
             # 获得开始索引+结束索引
-            start = Boot.Col_Idx.index(start)
-            end = Boot.Col_Idx.index(end)
+            start = column_index_from_string(start) # 列名 转 列号数
+            end = column_index_from_string(end)
             # 构建yield迭代器
             for i in range(start, end + 1):
-                yield Boot.Col_Idx[i]
+                yield get_column_letter(i) # 列号数 转 列名
             return
 
         # 2 单值
         return [bound]
 
-    # 迭代指定范围内的单元格
-    # https://blog.csdn.net/weixin_48668114/article/details/126444151
+    # 迭代指定范围内的单元格的值
+    def iterate_cell_vals(self, bound):
+        for cell in self.iterate_cells(bound):
+            yield cell.value
+
     def iterate_cells(self, bound):
+        '''
+        迭代指定范围内的单元格
+        https://blog.csdn.net/weixin_48668114/article/details/126444151
+
+        :param bound: 区域 ws["A1:C3"], ws["A:C"], ws[1:3]
+                      单行 ws["1"]
+                      单列 ws["A"]
+                      单元格 ws["A1"]
+        :return:
+        '''
         # 简单检查范围格式: 字母大小写都可以
         if re.match(r'[\w+\d:]+', bound) == None: # 匹配： 字母数字:
-            if re.match(r'[\d,:]+', bound) == None:  # 匹配： 数字,:
-                raise Exception('无效范围: ' + bound)
+            raise Exception('无效范围: ' + bound)
 
-        # 1 纯数字: 如 1,2 或 1,2:3,4
-        if ',' in bound:
-            bs = self.split_bound(bound)
-            if len(bs) == 4: # 1.1 范围: 起始行, 起始列, 结束行, 结束列
-                for row in range(bs[0], bs[3] + 1):
-                    for col in range(bs[1], bs[4] + 1):
-                        yield self.ws.cell(row, col)
-                return
-
-            # 1.2 单个单元格: 起始行, 起始列
-            yield self.ws.cell(bs[0], bs[1])
-            return
-
-        # 2 字母+数字
-        # 2.1 范围 ws["A1:C3"], ws["A:C"], ws[1:3]
+        # 1 范围 ws["A1:C3"], ws["A:C"], ws[1:3]
         if ':' in bound:
             for items in self.ws[bound]:
                 for cell in items:
                     yield cell
             return
 
-        # 2.2 单个单元格 ws["A1"]
+        # 2 单个单元格 ws["A1"]
         mat = re.match(r'\w+\d+', bound) # 匹配: 字母+数字
         if mat != None:
             yield self.ws[bound]
             return
 
-        # 2.3 单列或单行 ws["A"], ws[1]
+        # 3 单列或单行 ws["A"], ws[1]
         for item in self.ws[bound]:
             yield item
 

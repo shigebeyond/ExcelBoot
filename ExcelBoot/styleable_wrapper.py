@@ -5,8 +5,8 @@ from pyutilb.util import *
 from openpyxl.styles.styleable import StyleableObject
 from openpyxl.cell import Cell, MergedCell
 from openpyxl.worksheet.dimensions import ColumnDimension, RowDimension
-from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, Protection
-import color2rgb
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from ExcelBoot import color2rgb
 
 '''
 # StyleableObject包装器, 包装Cell/ColumnDimension/RowDimension等对象, 主要是给这些对象设置样式

@@ -171,13 +171,13 @@ print: "总申请数=${dyn_data.total_apply}, 剩余份数=${dyn_data.quantity_r
 
 10. 遍历cell设置样式
 ```yaml
-- cells(A1:C2): # 指定范围的多个单元格
+- cells(A1:C2): # 指定区域的多个单元格
+    fill: red
+- cells(A): # 指定列的多个单元格
+    fill: red
+- cells(1): # 指定行的多个单元格
     fill: red
 - cells(A1): # 单个单元格
-    fill: red
-- cells(1,1:3,2): # 指定范围的多个单元格
-    fill: red
-- cells(1,1): # 单个单元格
     fill: red
 ```
 

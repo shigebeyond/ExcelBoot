@@ -48,6 +48,15 @@ class DfColMapper(object):
             r.append(v)
         self.df[col] = r
 
+    # 读属性值，如果属性不存在，则读变量
+    def get_attr_or_var(self, obj, attrname):
+        # 1 有属性
+        if hasattr(obj, attrname):
+            return getattr(obj, attrname)  # 属性值
+
+        # 2 无属性, 则读变量
+        return get_var(attrname)
+
     # 将[引用属性的参数]替换为属性值
     def replace_attr_params(self, params, row):
         r = []
@@ -55,7 +64,7 @@ class DfColMapper(object):
         # re正则匹配替换字符串 https://cloud.tencent.com/developer/article/1774589
         def replace(match, _ = None) -> str:
             attrname = match.group(1) # 属性名
-            return getattr(row, attrname)  # 属性值
+            return self.get_attr_or_var(row, attrname)  # 属性值
         
         for i in range(0, len(params)):
             v = params[i]  # 参数
@@ -83,7 +92,7 @@ class DfColMapper(object):
     def build_attr_vars(self, attrnames, row):
         r = {}
         for attrname in attrnames:
-            r[attrname] = getattr(row, attrname)
+            r[attrname] = self.get_attr_or_var(row, attrname)
         return r
 
     # 添加行号列: 需要单独调用

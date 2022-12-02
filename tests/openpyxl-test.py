@@ -15,6 +15,11 @@ Worksheet 的其他属性:
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment, Protection, colors
+from openpyxl.utils.cell import column_index_from_string, get_column_letter
+
+# 列号和字母的互转
+print('列号数->列名: ' + get_column_letter(11))
+print('列名->列号数: ' + str(column_index_from_string('AD')))
 
 wb = Workbook() # 默认生成一个名为Sheet的sheet
 
@@ -51,8 +56,11 @@ res_col = sheet.column_dimensions.items()
 for i,obj in res_col:
     print(i,obj)
 
-# 修改单元格
 sheet = wb['a']
+# 修改列
+col = sheet['A']
+
+# 修改单元格
 cell = sheet['A1']
 cell.style = "Hyperlink"
 cell.value = 'test'
