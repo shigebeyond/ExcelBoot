@@ -21,13 +21,13 @@
             information_schema. TABLES
         WHERE
             TABLE_SCHEMA = 'test'
-## 转换df列
+# 转换df列
 #- map_df_cols(tables):
 #      序号: add_id() # 加行号
 #      表链接: link_sheet($表名) # sheet链接
-# 将tables变量值导出到excel
+# 将tables变量值导出到当前sheet
 - export_df: tables
-# 转换sheet列
+# 转换sheet列，相当于map_df_cols，差异在于map_df_cols转换的是变量，map_cols转换的是sheet
 - map_cols:
       header: true
       序号: add_id() # 加行号

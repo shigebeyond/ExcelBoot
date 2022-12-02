@@ -108,22 +108,22 @@ print: "总申请数=${dyn_data.total_apply}, 剩余份数=${dyn_data.quantity_r
     echo_sql: true
 ```
 
-3. 开始编辑excel
+3. start_edit: 开始编辑excel
 ```yaml
 - start_edit: data/test数据结构.xlsx
 ```
 
-4. 结束编辑excel（保存）
+4. end_edit: 结束编辑excel（保存）
 ```yaml
 - end_edit:
 ```
 
-5. 切换sheet
+5. switch_sheet: 切换sheet
 ```yaml
 - switch_sheet: 目录
 ```
 
-6. 查sql, 将结果放到变量中
+6. query_db: 查询sql, 并将查询结果放到变量中
 ```yaml
 - query_db:
     # 查询结果放到变量tables
@@ -137,41 +137,48 @@ print: "总申请数=${dyn_data.total_apply}, 剩余份数=${dyn_data.quantity_r
             TABLE_SCHEMA = 'test'
 ```
 
-7. 转换列
+7. map_df_cols: DataFrame列转换，其中动作名中()包含的是list或DataFrame类型的变量名
 ```yaml
-- map_cols(tables):
+# 对tables变量进行列转换
+- map_df_cols(tables):
       序号: add_id() # 加行号
       搜索: link(链接, http://baidu.com?wd=$表名) # url链接
       表链接: link_sheet($表名) # sheet链接
 ```
 
-8. 将变量值导出到excel
+8. map_cols: 转换sheet列，相当于map_df_cols，差异在于map_df_cols转换的是变量，map_cols转换的是sheet
 ```yaml
-- export_df: tables # 导出变量 tables 的值
+- map_cols:
+      header: true
+      序号: add_id() # 加行号
+      表链接: link_sheet($表名) # sheet链接
 ```
 
-8. 将sql查询结果导出到excel
+9. export_df: 将变量值导出到当前sheet
+```yaml
+- export_df: tables # 导出变量 tables 的值到当前sheet
+```
+
+10. export_db: 将sql查询结果导出到excel
 ```yaml
 - export_db: select * from user # 查询sql
 ```
 
-9. 插入行
+11. set_value: 设置单元格的值
 ```yaml
-# 在第1行之上插入3行
-- insert_rows: 0, 3
+- set_value:
+  B2: txt
+  # 值是变量表达式
+  B4: $msg
+  # 值是list/tuple/set/pd.Series类型的变量
+  B: $col_values
+  1: $row_values
 ```
 
-9. 设置单元格的值
-```yaml
-- cell_value:
-  B2: 表名
-  B3: 表编码
-  B4: 表用途
-```
-
-10. 遍历cell设置样式
+12. cells: 遍历cell设置样式或值, 其中动作名中()包含的是范围字符串, 支持变量表达式
 ```yaml
 - cells(A1:C2): # 指定区域的多个单元格
+    # 设置每个单元格的样式
     fill: red
 - cells(A): # 指定列的多个单元格
     fill: red
@@ -214,7 +221,7 @@ row/col/cell都支持的样式
         color: FFFF0000 # 边线颜色
 ```
 
-11. 遍历col设置样式
+13. cols: 遍历col设置样式, 其中动作名中()包含的是范围字符串, 支持变量表达式
 ```yaml
 - cols(D:E): # 多列
     fill: blue
@@ -228,7 +235,7 @@ col独有的样式
     width: 40
 ```
 
-12. 遍历row设置样式
+14. rows: 遍历row设置样式, 其中动作名中()包含的是范围字符串, 支持变量表达式
 ```yaml
 - rows(4:5): # 多行
     fill: green
@@ -242,7 +249,43 @@ row独有的样式
     height: 40
 ```
 
-13. for: 循环; 
+15. insert_rows: 插入行
+```yaml
+# 在第1行之上插入3行
+- insert_rows: 1, 3
+```
+
+16. insert_cols: 插入列
+```yaml
+# 在第1列之前插入3列
+- insert_cols: 1, 3
+```
+
+17. delete_rows: 删除行
+```yaml
+# 删除第1-4行
+- delete_rows: 1, 3
+```
+
+18. delete_cols: 删除列
+```yaml
+# 删除第1-4列
+- delete_cols: 1, 3
+```
+
+19. merge_cells: 合并单元格
+```yaml
+# 合并 C1 到 D2 区域的单元格
+- merge_cells: C1:D2
+```
+
+20. unmerge_cells: 取消合并单元格
+```yaml
+# 取消合并 C1 到 D2 区域的单元格
+- unmerge_cells: C1:D2
+```
+
+21. for: 循环; 
 for动作下包含一系列子步骤，表示循环执行这系列子步骤；变量`for_i`记录是第几次迭代（从1开始）,变量`for_v`记录是每次迭代的元素值（仅当是list类型的变量迭代时有效）
 ```yaml
 # 循环3次
@@ -263,7 +306,7 @@ for:
     switch_sheet: test
 ```
 
-14. once: 只执行一次，等价于 `for(1)`; 
+22. once: 只执行一次，等价于 `for(1)`; 
 once 结合 moveon_if，可以模拟 python 的 `if` 语法效果
 ```yaml
 once:
@@ -272,24 +315,24 @@ once:
     switch_sheet: test
 ```
 
-15. break_if: 满足条件则跳出循环; 
+23. break_if: 满足条件则跳出循环; 
 只能定义在for/once循环的子步骤中
 ```yaml
 break_if: for_i>2 # 条件表达式，python语法
 ```
 
-16. moveon_if: 满足条件则往下走，否则跳出循环; 
+24. moveon_if: 满足条件则往下走，否则跳出循环; 
 只能定义在for/once循环的子步骤中
 ```yaml
 moveon_if: for_i<=2 # 条件表达式，python语法
 ```
 
-17. include: 包含其他步骤文件，如记录公共的步骤，或记录配置数据(如用户名密码); 
+25. include: 包含其他步骤文件，如记录公共的步骤，或记录配置数据(如用户名密码); 
 ```yaml
 include: part-common.yml
 ```
 
-18. set_vars: 设置变量; 
+26. set_vars: 设置变量; 
 ```yaml
 set_vars:
   name: shi
@@ -297,7 +340,7 @@ set_vars:
   birthday: 5-27
 ```
 
-19. print_vars: 打印所有变量; 
+27. print_vars: 打印所有变量; 
 ```yaml
 print_vars:
 ```

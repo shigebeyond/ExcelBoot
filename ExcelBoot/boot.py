@@ -276,6 +276,9 @@ class Boot(object):
 
     # 开始编辑excel
     def start_edit(self, file):
+        if self.wb != None:
+            raise Exception(f"尚有excel文件[{self.file}]在编辑中, 没有结束编辑")
+
         self.file = replace_var(file)
         self.reload_wb()
 
@@ -294,22 +297,28 @@ class Boot(object):
 
     # 重载Workbook
     def reload_wb(self):
-        self.wb = Workbook()
         '''
         if os.path.isfile(self.file):
             self.wb = load_workbook(self.file)
         else:
             self.wb = Workbook()
         '''
+        # 创建Workbook
+        self.wb = Workbook()
+        # 删除默认创建的sheet
+        sheets = self.wb.sheetnames
+        if len(sheets) > 0:
+            del self.wb[sheets[0]]
+
         self.sheet = None
         self.ws = None
 
     # 重载Worksheet
     def reload_ws(self):
-        if self.sheet not in self.wb.sheetnames:
-            self.ws = self.wb.create_sheet(self.sheet)
-        else:
+        if self.sheet in self.wb.sheetnames: # 有则返回
             self.ws = self.wb[self.sheet]
+        else: # 无则创建
+            self.ws = self.wb.create_sheet(self.sheet)
 
     # 连接db
     def connect_db(self, config):
