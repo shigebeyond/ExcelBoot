@@ -24,7 +24,7 @@ class StyleableWrapper(object):
 
     def __init__(self, obj: StyleableObject):
         self.obj = obj # StyleableObject 对象, 如 Cell/ColumnDimension/RowDimension
-        if isinstance(obj, Cell) or isinstance(obj, MergedCell):
+        if isinstance(obj, (Cell, MergedCell)):
             self.type = 'cell'
         elif isinstance(obj, ColumnDimension):
             self.type = 'col'

@@ -43,7 +43,8 @@ for sheet in wb:
 ls = [1, 2, 3, 4, 5, 6]
 for sheet in wb:
     for i in range(5):
-        sheet.append(ls)
+        row = [sheet.title + str(it*i) for it in ls]
+        sheet.append(row)
 
 print("输出行dim")
 for sheet in wb:
@@ -57,6 +58,14 @@ for i,obj in res_col:
     print(i,obj)
 
 sheet = wb['a']
+print("输出行全部值")
+print(list(sheet.values))
+i = 0
+for items in sheet["A1:C4"]: # 输出顺序：先逐行，后逐列
+    i += 1
+    print(f"A1:C3-第{i}行")
+    print([cell.value for cell in items])
+
 # 修改列
 col = sheet['A']
 

@@ -4,6 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 import pandas as pd
 import sys
 import datetime
+from pyutilb import log
 
 # db类
 class Db:
@@ -57,12 +58,12 @@ class Db:
             for k, v in params.items():
                 if isinstance(v, str):
                     v = f"'{v}'"
-                elif isinstance(v, datetime.datetime) or isinstance(v, datetime.date):
+                elif isinstance(v, (datetime.datetime, datetime.date)):
                     v = v.strftime("%Y%m%d")
                     v = f"'{v}'"
                 sql = sql.replace(':' + k, str(v))
 
-            print(sql)
+            log.debug(sql)
 
     # 查询sql
     def query_sql(self, sql, params={}):

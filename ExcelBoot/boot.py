@@ -47,14 +47,15 @@ class Boot(object):
             'query_db': self.query_db,
             'export_df': self.export_df,
             'export_db': self.export_db,
+            'map_df_cols': self.map_df_cols,
             'map_cols': self.map_cols,
-            'cell_value': self.cell_value,
+            'set_value': self.set_value,
             'cells': self.cells,
             'cols': self.cols,
             'rows': self.rows,
             'insert_rows': self.insert_rows,
-            'remove_cols': self.remove_cols,
-            'remove_rows': self.remove_rows,
+            'delete_cols': self.delete_cols,
+            'delete_rows': self.delete_rows,
             'merge_cells': self.merge_cells,
             'unmerge_cells': self.unmerge_cells,
         }
@@ -177,7 +178,7 @@ class Boot(object):
         # fix bug: pd.Series == None 居然返回pd.Series
         if isinstance(n, pd.Series):
             return n
-        if n == None or not (isinstance(n, list) or isinstance(n, int)):
+        if n == None or not (isinstance(n, (list, tuple, set, int))):
             raise Exception(f'Variable in for({n}) parentheses must be int or list or pd.Series type')
         return n
 
@@ -195,7 +196,7 @@ class Boot(object):
             label = f"for(∞)"
         # 循环的列表值
         items = None
-        if isinstance(n, list) or isinstance(n, pd.Series):
+        if isinstance(n, (list, tuple, set, pd.Series)):
             items = n
             n = len(items)
         log.debug(f"-- Loop start: {label} -- ")
@@ -339,30 +340,29 @@ class Boot(object):
         sql = replace_var(sql)
         # 查询
         df = self.db.query_dataFrame(sql)
-        # 导出
+        # 导出 df
         self.do_export(df, sql)
 
-    # 真正的导出
+    # 真正的导出 df
     def do_export(self, df, var):
         if 'select' in var or 'SELECT' in var:
             type = "select sql"
         else:
             type = "列表变量"
         if len(df) == 0:
-            print(f"{type}[{var}]为空, 不用导出excel")
+            log.debug(f"{type}[{var}]为空, 不用导出excel")
             return
 
-        # 导出 df
-        for row in dataframe_to_rows(df, index=False, header=True):
-            self.ws.append(row)
+        # df转sheet
+        self.df2sheet(df)
 
     # 获得指定变量, 并保证是DataFrame类型
     def get_var_DataFrame(self, var):
         val = get_var(var)
         # 检查类型
         if not isinstance(val, pd.DataFrame):
-            if not isinstance(val, list):
-                raise Exception(f"变量[{var}]值不是DataFrame或list: {val}")
+            if not isinstance(val, (list, tuple, set)):
+                raise Exception(f"变量[{var}]值不是DataFrame或list或tuple或set: {val}")
             # list转DataFrame
             if len(val) == 0: # 空
                 val = pd.DataFrame()
@@ -373,22 +373,129 @@ class Boot(object):
             set_var(var, val)
         return val
 
+    # df转sheet
+    def df2sheet(self, df):
+        if df.empty:
+            return
+
+        # 1 df转list: dataframe_to_rows()
+        rows = dataframe_to_rows(df, index=False, header=True)
+
+        # 2 写sheet
+        # 2.1 sheet为空：直接插
+        if self.ws._current_row == 0:
+            for row in rows:
+                self.ws.append(row)
+            return
+
+        # 2.2 sheet不空：改数据
+        rows = list(rows) # generater 转 list
+        r = len(rows)
+        c = len(rows[0])
+        bound = self.check_bound(f'1,1:{r},{c}')
+        self.do_set_cell_values(bound, rows)
+
+    # sheet转df
+    def sheet2df(self, has_header):
+        # 获得sheet数据
+        values = self.ws.values  # generator
+        values = list(values)  # 转list
+        # 空
+        if len(values) == 0:
+            return pd.DataFrame()
+
+        # 列名
+        if has_header:
+            # 第一行作为列名
+            # columns = self.iterate_cell_values('1')
+            columns = values[0]
+            # 删除第一行
+            del values[0]
+        else:  # ABC作为列名
+            columns = [get_column_letter(i) for i in range(1, len(values[0]) + 1)]
+
+        # 转df
+        return pd.DataFrame(values, columns=columns)
+
     # df列变换
-    def map_cols(self, cols, var_df):
+    def map_df_cols(self, cols, var_df):
         # 获得df
         df = self.get_var_DataFrame(var_df)
+        self.do_map_df_cols(cols, df)
+
+    # 真正的df列变换
+    def do_map_df_cols(self, cols, df):
         # 构建df列变换器
         mapper = DfColMapper(df)
         # 逐列转换
         for col, expr in cols.items():
             mapper.map(col, expr)
 
+    # sheet中列变换
+    # 实现是先将sheet转为df，用df来做列变化
+    def map_cols(self, cols):
+        # 检查是否配置了 header，标识是否有表头(即列名)
+        has_header = False
+        if 'header' in cols:
+            has_header = cols['header']
+            del cols['header']
+
+        # 1 sheet转df
+        df = self.sheet2df(has_header)
+
+        # 2 df转换
+        self.do_map_df_cols(cols, df)
+
+        # 3 df转sheet
+        self.df2sheet(df)
+
     # 设置单元格的值
-    def cell_value(self, config):
+    def set_value(self, config):
+        # 遍历每个范围来设置值
         for bound, value in config.items():
+            # 范围+值都要替换变量
+            bound = self.check_bound(bound)
             if isinstance(value, str):
                 value = replace_var(value)
-            self.ws[bound].value = value
+
+            # 1 设置多值
+            if isinstance(value, (list, tuple, set, pd.Series)):
+                self.do_set_cell_values(bound, value)
+                return
+
+            # 2 设置单值
+            for cell in self.iterate_cells(bound):
+                cell.value = value
+
+    def do_set_cell_values(self, bound, vals):
+        '''
+        根据范围类型来设置多个单元格的值， 参考 iterate_cells() 的实现
+        :param bound: 范围
+        :param vals: 多个值，其维度(1维或2维)与范围中的行列对应
+        '''
+        # 1 范围 ws["A1:C3"], ws["A:C"], ws[1:3]
+        if ':' in bound:
+            # 输出顺序：先逐行，后逐列
+            r = 0
+            for row in self.ws[bound]:
+                c = 0
+                for cell in row:
+                    cell.value = vals[r][c]
+                    c += 1
+                r += 1
+            return
+
+        # 2 单个单元格 ws["A1"]
+        mat = re.match(r'\w+\d+', bound)  # 匹配: 字母+数字
+        if mat != None:
+            self.ws[bound].value = vals
+            return
+
+        # 3 单列或单行 ws["A"], ws[1]
+        i = 0
+        for cell in self.ws[bound]:
+            i += 1
+            cell.value = vals[i]
 
     # 循环rows, 如 rows(1:3)
     # :param styles 每个迭代中要应用的样式
@@ -417,12 +524,14 @@ class Boot(object):
 
     # 迭代指定范围内的行
     def iterate_rows(self, bound):
+        bound = self.check_bound(bound)
         # return map(lambda row: self.ws.row_dimensions[row], self.build_row_range(bound))
         for row in self.build_row_range(bound):
             yield self.ws.row_dimensions[row]
 
     # 迭代指定范围内的列
     def iterate_cols(self, bound):
+        bound = self.check_bound(bound)
         for col in self.build_col_range(bound):
             yield self.ws.column_dimensions[col]
 
@@ -468,7 +577,8 @@ class Boot(object):
         return [bound]
 
     # 迭代指定范围内的单元格的值
-    def iterate_cell_vals(self, bound):
+    def iterate_cell_values(self, bound):
+        bound = self.check_bound(bound)
         for cell in self.iterate_cells(bound):
             yield cell.value
 
@@ -483,14 +593,11 @@ class Boot(object):
                       单元格 ws["A1"]
         :return:
         '''
-        # 简单检查范围格式: 字母大小写都可以
-        if re.match(r'[\w+\d:]+', bound) == None: # 匹配： 字母数字:
-            raise Exception('无效范围: ' + bound)
-
         # 1 范围 ws["A1:C3"], ws["A:C"], ws[1:3]
         if ':' in bound:
-            for items in self.ws[bound]:
-                for cell in items:
+            # 输出顺序：先逐行，后逐列
+            for row in self.ws[bound]:
+                for cell in row:
                     yield cell
             return
 
@@ -501,28 +608,30 @@ class Boot(object):
             return
 
         # 3 单列或单行 ws["A"], ws[1]
-        for item in self.ws[bound]:
-            yield item
+        for cell in self.ws[bound]:
+            yield cell
 
-    # 分割范围
-    def split_bound(self, bound):
-        bs = bound.split(':', 1)
-        if len(bs) == 2:
-            start = bs[0].split(',', 1)
-            end = bs[1].split(',', 1)
-            # 起始行, 起始列, 结束行, 结束列
-            return [self.to_int(start[0]), self.to_int(start[1]), self.to_int(end[0], self.ws.max_row), self.to_int(end[1], self.ws.max_col)]
+    # 检查范围+替换变量+转换范围格式
+    def check_bound(self, bound):
+        # 1 简单检查范围格式: 字母大小写都可以
+        if re.match(r'[\w+\d:,]+', bound) == None:  # 匹配： 字母数字:
+            raise Exception('无效范围: ' + bound)
 
-        start = bound.split(',', 1)
-        # 起始行, 起始列
-        return [self.to_int(start[0]), self.to_int(start[1])]
+        # 2 替换变量
+        bound = replace_var(bound)
 
-    # 转int, 有默认值(行号、列号从1开始)
-    def to_int(self, str, default = 1):
-        if str == None or str == '':
-            return default
+        # 3 转换范围"起始行,起始列:结束行,结束列"为openpyxl格式，就是行在前变为列在前，如 1,2:3,4 转 B1:D3
+        if ',' in bound:
+            def replace(match) -> str:
+                r1 = match.group(1)
+                c1 = get_column_letter(int(match.group(2)))
+                r2 = match.group(3)
+                c2 = get_column_letter(int(match.group(4)))
+                # 列放到行前面
+                return f"{c1}{r1}:{c2}{r2}"
+            return re.sub(rf'(\d+),(\d+):(\d+),(\d)', replace, bound)
 
-        return int(str)
+        return bound
 
     # 插入列
     # :param param 起始列,插入列数
@@ -538,17 +647,18 @@ class Boot(object):
 
     # 删除列
     # :param param 起始列,删除列数
-    def remove_cols(self, param):
+    def delete_cols(self, param):
         idx, amount = param.split(',')
-        self.ws.remove_cols(idx, amount)
+        self.ws.delete_cols(idx, amount)
 
     # 删除行
     # :param param 起始行,删除行数
-    def remove_rows(self, param):
+    def delete_rows(self, param):
         idx, amount = param.split(',')
-        self.ws.remove_rows(idx, amount)
+        self.ws.delete_rows(idx, amount)
 
     # 合并单元格
+    # https://blog.csdn.net/ovejur/article/details/123982122
     def merge_cells(self, param):
         # self.wb.merge_cells(start_row=7, start_column=1, end_row=8, end_column=3)
         if re.match(r'\d+,\d+:\d+,\d+', param):

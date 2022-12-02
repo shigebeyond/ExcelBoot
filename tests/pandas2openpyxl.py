@@ -3,7 +3,7 @@
 
 import pandas as pd
 from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.utils.dataframe import dataframe_to_rows, expand_index
 from openpyxl import load_workbook
 
 # df 转 openpyxl
@@ -19,9 +19,13 @@ def df2open():
     wb = Workbook()
     ws = wb.active
     # df 转 openpyxl
-    for row in dataframe_to_rows(df, index=False, header=True):
+    values = dataframe_to_rows(df, index=False, header=True)
+    for row in values:
         ws.append(row)
+
     wb.save("../data/pandas.xlsx")
+
+    pd.read_csv
 
 # openpyxl 转 df
 def open2df():
@@ -32,5 +36,5 @@ def open2df():
     df = pd.DataFrame(values)
     print(df)
 
-df2open()
+# df2open()
 open2df()
