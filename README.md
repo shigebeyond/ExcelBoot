@@ -63,7 +63,7 @@ ExcelBoot 步骤配置目录
 ExcelBoot 步骤配置目录/step-*.yml
 ```
 
-如执行 `ExcelBoot example/step-test.yml`，输出如下
+如执行 `ExcelBoot example/step-dbschema.yml`，输出如下
 ```
 ......
 ```
@@ -77,7 +77,7 @@ ExcelBoot 步骤配置目录/step-*.yml
 每个步骤里有多个动作(如switch_sheet/export_df)，如果动作有重名，就另外新开一个步骤写动作，这是由yaml语法限制导致的，但不影响步骤执行。
 
 简单贴出1个demo
-1. 导出数据库中的表与字段: 详见 [example/step-test.yml](example/step-test.yml)
+1. 导出数据库中的表与字段: 详见 [example/step-dbschema.yml](example/step-dbschema.yml)
 ```yaml
 
 ```
@@ -139,17 +139,20 @@ print: "总申请数=${dyn_data.total_apply}, 剩余份数=${dyn_data.quantity_r
 
 7. map_df_cols: DataFrame列转换，其中动作名中()包含的是list或DataFrame类型的变量名
 ```yaml
-# 对tables变量进行列转换
 - map_df_cols(tables):
+      # 新列名:每一行执行的函数表达式
+      # 每一行的函数执行结果组成新列，表达式可以带变量，如 $列名，表示该行中指定列的值
       序号: add_id() # 加行号
-      搜索: link(链接, http://baidu.com?wd=$表名) # url链接
       表链接: link_sheet($表名) # sheet链接
+      搜索: link(链接, http://baidu.com?wd=$表名) # url链接
 ```
 
 8. map_cols: 转换sheet列，相当于map_df_cols，差异在于map_df_cols转换的是变量，map_cols转换的是sheet
 ```yaml
 - map_cols:
-      header: true
+      header: true # 是否有表头，表示第一行作为列名
+      # 新列名:每一行执行的函数表达式
+      # 每一行的函数执行结果组成新列，表达式可以带变量，如 $列名，表示该行中指定列的值
       序号: add_id() # 加行号
       表链接: link_sheet($表名) # sheet链接
 ```
@@ -164,15 +167,29 @@ print: "总申请数=${dyn_data.total_apply}, 剩余份数=${dyn_data.quantity_r
 - export_db: select * from user # 查询sql
 ```
 
-11. set_value: 设置单元格的值
+11. get_cell_value: 读取单元格的值
 ```yaml
-- set_value:
-  B2: txt
-  # 值是变量表达式
-  B4: $msg
-  # 值是list/tuple/set/pd.Series类型的变量
-  B: $col_values
-  1: $row_values
+- get_cell_value:
+      # 变量msg取B2单元格的单个值
+      msg: B2
+      # 变量取list/tuple/set/pd.Series类型的值
+      # 变量col_values取B列的多个值（一维数组）
+      col_values: B
+      # 变量row_values取第1行的多个值（一维数组）
+      row_values: 1
+      # 变量boud_values取B1到D2区域的多个值（二维数组）
+      boud_values: B1:D2
+```
+
+11. set_cell_value: 设置单元格的值
+```yaml
+- set_cell_value:
+      B2: txt
+      # 值是变量表达式
+      B4: $msg
+      # 值是list/tuple/set/pd.Series类型的变量
+      B: $col_values
+      1: $row_values
 ```
 
 12. cells: 遍历cell设置样式或值, 其中动作名中()包含的是范围字符串, 支持变量表达式

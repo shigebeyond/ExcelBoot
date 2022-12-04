@@ -1,6 +1,6 @@
 # 连接db
 - connect_db:
-    ip: 192.168.62.200
+    ip: localhost
     port: 3306
     dbname: test
     user: root
@@ -22,14 +22,18 @@
         WHERE
             TABLE_SCHEMA = 'test'
 # 转换df列
-#- map_df_cols(tables):
-#      序号: add_id() # 加行号
-#      表链接: link_sheet($表名) # sheet链接
+- map_df_cols(tables):
+      # 新列名:每一行执行的函数表达式
+      # 每一行的函数执行结果组成新列，表达式可以带变量，如 $列名，表示该行中指定列的值
+      序号: add_id() # 加行号
+      表链接: link_sheet($表名) # sheet链接
 # 将tables变量值导出到当前sheet
 - export_df: tables
 # 转换sheet列，相当于map_df_cols，差异在于map_df_cols转换的是变量，map_cols转换的是sheet
 - map_cols:
-      header: true
+      header: true # 是否有表头，表示第一行作为列名
+      # 新列名:每一行执行的函数表达式
+      # 每一行的函数执行结果组成新列，表达式可以带变量，如 $列名，表示该行中指定列的值
       序号: add_id() # 加行号
       表链接: link_sheet($表名) # sheet链接
 # 第3列设置宽度
@@ -71,7 +75,7 @@
       - cells(B1):
           value: ${link_sheet(目录,返回目录)}
           style: Hyperlink  # 添加超连接样式
-      - set_value:
+      - set_cell_value:
           B2: 表名
           B3: 表编码
           B4: 表用途

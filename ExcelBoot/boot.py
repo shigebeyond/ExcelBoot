@@ -6,7 +6,7 @@ from pyutilb.util import *
 from pyutilb import log
 import pandas as pd
 from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.utils.cell import column_index_from_string, get_column_letter
+from openpyxl.utils.cell import column_index_from_string, get_column_letter, range_boundaries
 from openpyxl import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 from ExcelBoot.db import Db
@@ -49,7 +49,7 @@ class Boot(object):
             'export_db': self.export_db,
             'map_df_cols': self.map_df_cols,
             'map_cols': self.map_cols,
-            'set_value': self.set_value,
+            'set_cell_value': self.set_cell_value,
             'cells': self.cells,
             'cols': self.cols,
             'rows': self.rows,
@@ -426,6 +426,21 @@ class Boot(object):
         # 转df
         return pd.DataFrame(values, columns=columns)
 
+    # 列表变量变换
+    # :param clos 变量名:变换函数
+    def map(self, cols):
+        # 构建df
+        df = pd.DataFrame()
+        # 逐列转换
+        for col, expr in cols.items():
+            # 列即变量
+            df['it'] = get_var(col)
+            # 构建df列变换器
+            mapper = DfColMapper(df)
+            mapper.map(col, expr)
+            # 回写变量
+            set_var(col, df['it'])
+
     # df列变换
     def map_df_cols(self, cols, var_df):
         # 获得df
@@ -459,7 +474,7 @@ class Boot(object):
         self.df2sheet(df)
 
     # 设置单元格的值
-    def set_value(self, config):
+    def set_cell_value(self, config):
         # 遍历每个范围来设置值
         for bound, value in config.items():
             # 范围+值都要替换变量
@@ -505,6 +520,45 @@ class Boot(object):
         for cell in self.ws[bound]:
             i += 1
             cell.value = vals[i]
+
+    # 读取单元格的值
+    def get_cell_value(self, config):
+        # 遍历每个范围来读取值
+        for var, bound in config.items():
+            # 范围要替换变量
+            bound = self.check_bound(bound)
+            # 读取范围单元格的值
+            value = self.do_get_cell_value(bound)
+            # 设置变量
+            set_var(var, value)
+
+    def do_get_cell_value(self, bound):
+        '''
+        根据范围类型来读取多个单元格的值， 参考 iterate_cells() 的实现
+        :param bound: 范围
+        :return 多个值，其维度(1维或2维)与范围中的行列对应
+        '''
+
+        # 1 范围 ws["A1:C3"], ws["A:C"], ws[1:3]
+        if ':' in bound:
+            # 输出顺序：先逐行，后逐列
+            # 以下2种实现是一样的
+            # r = []
+            # for row in self.ws[bound]:
+            #     vs = [cell.value for cell in row]
+            #     r.append(vs)
+            # return r
+            # 参考 Worksheet.__getitem__() 的实现
+            min_col, min_row, max_col, max_row = range_boundaries(bound)
+            return tuple(self.ws.iter_rows(min_row=min_row, min_col=min_col, max_row=max_row, max_col=max_col, values_only=True))
+
+        # 2 单个单元格 ws["A1"]
+        mat = re.match(r'\w+\d+', bound)  # 匹配: 字母+数字
+        if mat != None:
+            return self.ws[bound].value
+
+        # 3 单列或单行 ws["A"], ws[1]
+        return [cell.value for cell in self.ws[bound]]
 
     # 循环rows, 如 rows(1:3)
     # :param styles 每个迭代中要应用的样式
