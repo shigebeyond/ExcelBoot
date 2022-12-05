@@ -12,6 +12,12 @@ from openpyxl.worksheet.worksheet import Worksheet
 from ExcelBoot.db import Db
 from ExcelBoot.styleable_wrapper import StyleableWrapper
 from ExcelBoot.df_col_mapper import DfColMapper
+import platform
+is_win = platform.system().lower() == 'windows'
+if is_win:
+    import pythoncom
+    pythoncom.CoInitialize()
+    import win32com.client
 
 # 跳出循环的异常
 class BreakException(Exception):
@@ -58,6 +64,7 @@ class Boot(object):
             'delete_rows': self.delete_rows,
             'merge_cells': self.merge_cells,
             'unmerge_cells': self.unmerge_cells,
+            'insert_file': self.insert_file,
         }
         set_var('boot', self)
         # 当前文件
@@ -284,6 +291,8 @@ class Boot(object):
 
     # 结束编辑excel -- 保存
     def end_edit(self, _):
+        if self.wb == None:
+            return
         self.wb.save(self.file)
         self.wb.close()
         self.wb = None
@@ -743,6 +752,46 @@ class Boot(object):
         # self.wb.unmerge_cells("C1:D2")
         return self.wb.unmerge_cells(param)
 
+    # 插入附件
+    def insert_file(self, config):
+        if not is_win:
+            raise Exception(f'由于 insert_file() 使用的是 pywin32 库, 非 windows 系统不能使用')
+
+        # 由于要使用不同的库，因此先保存openpyxl
+        self.end_edit()
+
+        # 使用 pywin32 库，来插入sql附件
+        # 报错 https://blog.csdn.net/dantegarden/article/details/77547524
+        # 成功 https://blog.csdn.net/weixin_39727402/article/details/110021522
+        # app = win32com.client.Dispatch('Excel.Application')
+        app = win32com.client.gencache.EnsureDispatch('Excel.Application')
+        # app = Dispatch('kwps.application')
+        app.Visible = True  # 显式打开excel 调试设置True
+
+        # 打开excel文件
+        wb = app.Workbooks.Open(self.file)
+        try:
+            ws = wb.Sheets(self.sheet)
+            for bound, file in config.items():
+                # 插入附件 To assign an object for OLEObject(=EMBED("Packager Shell Object","")).
+                # obj = ws.Shapes.AddOLEObject(ClassType='Paint.Picture', Filename=file, Link=False)  # 报错: err in AddOLEObject: pywintypes.com_error: (-2147352567, '发生意外。', (0, None, None, None, 0, -2146827284), None)
+                obj = ws.OLEObjects().Add(ClassType=None, Filename=file, Link=False, DisplayAsIcon=True, Width=18, Height=50)  # 成功
+
+                # 定位附件到指定单元格
+                bound = self.check_bound(bound) # 范围要替换变量
+                min_col, min_row, _, _ = range_boundaries(bound)
+                cell = ws.Cells(min_col, min_row)
+                obj.Left = cell.Left
+                obj.Top = cell.Top
+        except Exception as e:
+            print(f"插入文件[{file}]报错: {e}")
+        finally:
+            wb.SaveAs(self.file)
+            app.Quit()
+
+            # 重新打开openpyxl
+            self.reload_wb()
+            self.reload_ws()
 
 # cli入口
 def main():

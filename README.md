@@ -181,7 +181,7 @@ print: "总申请数=${dyn_data.total_apply}, 剩余份数=${dyn_data.quantity_r
       boud_values: B1:D2
 ```
 
-11. set_cell_value: 设置单元格的值
+12. set_cell_value: 设置单元格的值
 ```yaml
 - set_cell_value:
       B2: txt
@@ -192,7 +192,7 @@ print: "总申请数=${dyn_data.total_apply}, 剩余份数=${dyn_data.quantity_r
       1: $row_values
 ```
 
-12. cells: 遍历cell设置样式或值, 其中动作名中()包含的是范围字符串, 支持变量表达式
+13. cells: 遍历cell设置样式或值, 其中动作名中()包含的是范围字符串, 支持变量表达式
 ```yaml
 - cells(A1:C2): # 指定区域的多个单元格
     # 设置每个单元格的样式
@@ -238,7 +238,7 @@ row/col/cell都支持的样式
         color: FFFF0000 # 边线颜色
 ```
 
-13. cols: 遍历col设置样式, 其中动作名中()包含的是范围字符串, 支持变量表达式
+14. cols: 遍历col设置样式, 其中动作名中()包含的是范围字符串, 支持变量表达式
 ```yaml
 - cols(D:E): # 多列
     fill: blue
@@ -252,7 +252,7 @@ col独有的样式
     width: 40
 ```
 
-14. rows: 遍历row设置样式, 其中动作名中()包含的是范围字符串, 支持变量表达式
+15. rows: 遍历row设置样式, 其中动作名中()包含的是范围字符串, 支持变量表达式
 ```yaml
 - rows(4:5): # 多行
     fill: green
@@ -266,43 +266,51 @@ row独有的样式
     height: 40
 ```
 
-15. insert_rows: 插入行
+16. insert_rows: 插入行
 ```yaml
 # 在第1行之上插入3行
 - insert_rows: 1, 3
 ```
 
-16. insert_cols: 插入列
+17. insert_cols: 插入列
 ```yaml
 # 在第1列之前插入3列
 - insert_cols: 1, 3
 ```
 
-17. delete_rows: 删除行
+18. delete_rows: 删除行
 ```yaml
 # 删除第1-4行
 - delete_rows: 1, 3
 ```
 
-18. delete_cols: 删除列
+19. delete_cols: 删除列
 ```yaml
 # 删除第1-4列
 - delete_cols: 1, 3
 ```
 
-19. merge_cells: 合并单元格
+20. merge_cells: 合并单元格
 ```yaml
 # 合并 C1 到 D2 区域的单元格
 - merge_cells: C1:D2
 ```
 
-20. unmerge_cells: 取消合并单元格
+21. unmerge_cells: 取消合并单元格
 ```yaml
 # 取消合并 C1 到 D2 区域的单元格
 - unmerge_cells: C1:D2
 ```
 
-21. for: 循环; 
+22. insert_file: 插入文件
+```yaml
+- insert_file: 
+    # 在A1单元格处, 插入文件a.txt
+    A1: a.txt
+    C1: c.txt
+```
+
+23. for: 循环; 
 for动作下包含一系列子步骤，表示循环执行这系列子步骤；变量`for_i`记录是第几次迭代（从1开始）,变量`for_v`记录是每次迭代的元素值（仅当是list类型的变量迭代时有效）
 ```yaml
 # 循环3次
@@ -323,7 +331,7 @@ for:
     switch_sheet: test
 ```
 
-22. once: 只执行一次，等价于 `for(1)`; 
+24. once: 只执行一次，等价于 `for(1)`; 
 once 结合 moveon_if，可以模拟 python 的 `if` 语法效果
 ```yaml
 once:
@@ -332,24 +340,24 @@ once:
     switch_sheet: test
 ```
 
-23. break_if: 满足条件则跳出循环; 
+25. break_if: 满足条件则跳出循环; 
 只能定义在for/once循环的子步骤中
 ```yaml
 break_if: for_i>2 # 条件表达式，python语法
 ```
 
-24. moveon_if: 满足条件则往下走，否则跳出循环; 
+26. moveon_if: 满足条件则往下走，否则跳出循环; 
 只能定义在for/once循环的子步骤中
 ```yaml
 moveon_if: for_i<=2 # 条件表达式，python语法
 ```
 
-25. include: 包含其他步骤文件，如记录公共的步骤，或记录配置数据(如用户名密码); 
+27. include: 包含其他步骤文件，如记录公共的步骤，或记录配置数据(如用户名密码); 
 ```yaml
 include: part-common.yml
 ```
 
-26. set_vars: 设置变量; 
+28. set_vars: 设置变量; 
 ```yaml
 set_vars:
   name: shi
@@ -357,7 +365,7 @@ set_vars:
   birthday: 5-27
 ```
 
-27. print_vars: 打印所有变量; 
+29. print_vars: 打印所有变量; 
 ```yaml
 print_vars:
 ```
