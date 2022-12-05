@@ -9,6 +9,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.utils.cell import column_index_from_string, get_column_letter, range_boundaries
 from openpyxl import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
+from openpyxl.drawing.image import Image
 from ExcelBoot.db import Db
 from ExcelBoot.styleable_wrapper import StyleableWrapper
 from ExcelBoot.df_col_mapper import DfColMapper
@@ -64,6 +65,7 @@ class Boot(object):
             'delete_rows': self.delete_rows,
             'merge_cells': self.merge_cells,
             'unmerge_cells': self.unmerge_cells,
+            'insert_image': self.insert_image,
             'insert_file': self.insert_file,
         }
         set_var('boot', self)
@@ -752,7 +754,21 @@ class Boot(object):
         # self.wb.unmerge_cells("C1:D2")
         return self.wb.unmerge_cells(param)
 
-    # 插入附件
+    # 插入图片
+    def insert_image(self, config):
+        for bound, opt in config.items():
+            if isinstance(opt, str):
+                file = opt
+            else:
+                file = opt['image']
+                size = opt['size'].split(',')
+                img.width = int(size[0])
+                img.height = int(size[1])
+            # 添加图片
+            img = Image(file)
+            self.ws.add_image(img, bound)
+
+    # 插入文件
     def insert_file(self, config):
         if not is_win:
             raise Exception(f'由于 insert_file() 使用的是 pywin32 库, 非 windows 系统不能使用')

@@ -30,12 +30,12 @@
 # 将tables变量值导出到当前sheet
 - export_df: tables
 # 转换sheet列，相当于map_df_cols，差异在于map_df_cols转换的是变量，map_cols转换的是sheet
-- map_cols:
-      header: true # 是否有表头，表示第一行作为列名
-      # 新列名:每一行执行的函数表达式
-      # 每一行的函数执行结果组成新列，表达式可以带变量，如 $列名，表示该行中指定列的值
-      序号: add_id() # 加行号
-      表链接: link_sheet($表名) # sheet链接
+#- map_cols:
+#      header: true # 是否有表头，表示第一行作为列名
+#      # 新列名:每一行执行的函数表达式
+#      # 每一行的函数执行结果组成新列，表达式可以带变量，如 $列名，表示该行中指定列的值
+#      序号: add_id() # 加行号
+#      表链接: link_sheet($表名) # sheet链接
 # 第3列设置宽度
 - cols(D):
     width: 40

@@ -302,7 +302,17 @@ row独有的样式
 - unmerge_cells: C1:D2
 ```
 
-22. insert_file: 插入文件
+22. insert_image: 插入图片
+```yaml
+- insert_image: 
+    # 在A1单元格处, 插入图片
+    A1: a.png
+    C1:
+      image: c.txt
+      size: 100,90 # 宽度,高度
+```
+
+23. insert_file: 插入文件
 ```yaml
 - insert_file: 
     # 在A1单元格处, 插入文件a.txt
@@ -310,7 +320,7 @@ row独有的样式
     C1: c.txt
 ```
 
-23. for: 循环; 
+24. for: 循环; 
 for动作下包含一系列子步骤，表示循环执行这系列子步骤；变量`for_i`记录是第几次迭代（从1开始）,变量`for_v`记录是每次迭代的元素值（仅当是list类型的变量迭代时有效）
 ```yaml
 # 循环3次
@@ -331,7 +341,7 @@ for:
     switch_sheet: test
 ```
 
-24. once: 只执行一次，等价于 `for(1)`; 
+25. once: 只执行一次，等价于 `for(1)`; 
 once 结合 moveon_if，可以模拟 python 的 `if` 语法效果
 ```yaml
 once:
@@ -340,24 +350,24 @@ once:
     switch_sheet: test
 ```
 
-25. break_if: 满足条件则跳出循环; 
+26. break_if: 满足条件则跳出循环; 
 只能定义在for/once循环的子步骤中
 ```yaml
 break_if: for_i>2 # 条件表达式，python语法
 ```
 
-26. moveon_if: 满足条件则往下走，否则跳出循环; 
+27. moveon_if: 满足条件则往下走，否则跳出循环; 
 只能定义在for/once循环的子步骤中
 ```yaml
 moveon_if: for_i<=2 # 条件表达式，python语法
 ```
 
-27. include: 包含其他步骤文件，如记录公共的步骤，或记录配置数据(如用户名密码); 
+28. include: 包含其他步骤文件，如记录公共的步骤，或记录配置数据(如用户名密码); 
 ```yaml
 include: part-common.yml
 ```
 
-28. set_vars: 设置变量; 
+29. set_vars: 设置变量; 
 ```yaml
 set_vars:
   name: shi
@@ -365,7 +375,7 @@ set_vars:
   birthday: 5-27
 ```
 
-29. print_vars: 打印所有变量; 
+30. print_vars: 打印所有变量; 
 ```yaml
 print_vars:
 ```
