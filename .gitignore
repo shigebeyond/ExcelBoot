@@ -1,15 +1,10 @@
-jkmvc.iml
+# Created by .ignore support plugin (hsz.mobi)
 .idea/
-build/
-target/
-data/
-.gradle
-*.log
 *.pyc
-*.csv
-out/
-upload/
 logs/
-tmp/
-__pycache__/
-venv/
+*.pid
+downloads/
+build/
+ExcelBoot.egg-info/
+dist/
+boot.log*

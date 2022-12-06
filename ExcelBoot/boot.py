@@ -759,13 +759,15 @@ class Boot(object):
         for bound, opt in config.items():
             if isinstance(opt, str):
                 file = opt
+                size = None
             else:
                 file = opt['image']
                 size = opt['size'].split(',')
-                img.width = int(size[0])
-                img.height = int(size[1])
             # 添加图片
             img = Image(file)
+            if size != None:
+                img.width = int(size[0])
+                img.height = int(size[1])
             self.ws.add_image(img, bound)
 
     # 插入文件
