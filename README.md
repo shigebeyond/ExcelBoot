@@ -65,6 +65,19 @@ ExcelBoot 步骤配置目录/step-*.yml
 
 如执行 `ExcelBoot example/step-dbschema.yml`，输出如下
 ```
+shi@shi-PC:[/home/shi/code/python/ExcelBoot]: ExcelBoot example/step-dbschema.yml 
+2022-12-06 19:08:17,916 - boot - DEBUG - Load and run step file: /ohome/shi/code/python/ExcelBoot/example/step-dbschema.yml
+2022-12-06 19:08:17,921 - boot - DEBUG - handle action: connect_db={'ip': '192.168.62.200', 'port': 3306, 'dbname': 'test', 'user': 'root', 'password': 'root', 'echo_sql': True}
+2022-12-06 19:08:17,937 - boot - DEBUG - handle action: start_edit=data/test数据结构.xlsx
+2022-12-06 19:08:17,938 - boot - DEBUG - handle action: switch_sheet=目录
+2022-12-06 19:08:17,938 - boot - DEBUG - handle action: query_db={'tables': "SELECT\n    TABLE_COMMENT as 表注释,\n    TABLE_NAME as 表名\nFROM\n    information_schema. TABLES\nWHERE\n    TABLE_SCHEMA = 'test'\n"}
+2022-12-06 19:08:17,938 - boot - DEBUG - SELECT
+    TABLE_COMMENT as 表注释,
+    TABLE_NAME as 表名
+FROM
+    information_schema. TABLES
+WHERE
+    TABLE_SCHEMA = 'test'
 ......
 ```
 命令会自动操作并生成excel

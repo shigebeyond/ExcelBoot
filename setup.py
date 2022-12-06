@@ -35,7 +35,6 @@ setup(
     install_requires=requires,
     classifiers=[
         "Development Status :: 5 - Production/Stable",
-        "Topic :: Software Development :: Excel auto generate",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Operating System :: POSIX :: Linux",
         'Operating System :: MacOS :: MacOS X',
