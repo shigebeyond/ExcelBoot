@@ -8,3 +8,4 @@ build/
 ExcelBoot.egg-info/
 dist/
 boot.log*
+data/
