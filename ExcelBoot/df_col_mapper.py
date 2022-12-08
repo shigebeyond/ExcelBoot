@@ -40,7 +40,7 @@ class DfColMapper(object):
         # 2.2 调用系统函数
         # 逐行调用函数, 来拼接列的每个值
         r = []
-        for row in self.df.itertuples():
+        for i, row in self.df.iterrows():
             # 将[引用属性的参数]替换为属性值
             params2 = self.replace_attr_params(params, row)
             # 调用系统函数
@@ -51,8 +51,8 @@ class DfColMapper(object):
     # 读属性值，如果属性不存在，则读变量
     def get_attr_or_var(self, obj, attrname):
         # 1 有属性
-        if hasattr(obj, attrname):
-            return getattr(obj, attrname)  # 属性值
+        if attrname in obj:
+            return obj[attrname]  # 属性值
 
         # 2 无属性, 则读变量
         return get_var(attrname)
@@ -80,7 +80,7 @@ class DfColMapper(object):
 
         # 逐行执行eval, 来拼接列的每个值
         r = []
-        for row in self.df.itertuples():
+        for i, row in self.df.iterrows():
             # 将[引用属性]作为eval的变量
             vars = self.build_attr_vars(attrnames, row)
             # eval
