@@ -3,7 +3,7 @@
 
 import fnmatch
 from pyutilb.util import *
-from pyutilb import log, YamlBoot
+from pyutilb import log, YamlBoot, BreakException
 import pandas as pd
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.utils.cell import column_index_from_string, get_column_letter, range_boundaries
@@ -20,10 +20,6 @@ if is_win:
     pythoncom.CoInitialize()
     import win32com.client
 
-# 跳出循环的异常
-class BreakException(Exception):
-    def __init__(self, condition):
-        self.condition = condition # 跳转条件
 
 # excel操作的基于yaml的启动器
 class Boot(YamlBoot):
