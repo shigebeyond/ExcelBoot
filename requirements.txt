@@ -5,3 +5,4 @@ mysql-connector==2.2.9
 pandas==1.1.5
 SQLAlchemy==1.4.23
 pyutilb >= 1.0.4
+openpyxl==3.0.7
