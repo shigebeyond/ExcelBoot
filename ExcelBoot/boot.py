@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import fnmatch
+import os
 from pyutilb.util import *
 from pyutilb import log, YamlBoot, BreakException
 import pandas as pd
@@ -13,13 +14,13 @@ from openpyxl.drawing.image import Image
 from ExcelBoot.db import Db
 from ExcelBoot.styleable_wrapper import StyleableWrapper
 from ExcelBoot.df_col_mapper import DfColMapper
+import ExcelBoot.plt_ext as plt
 import platform
 is_win = platform.system().lower() == 'windows'
 if is_win:
     import pythoncom
     pythoncom.CoInitialize()
     import win32com.client
-
 
 # excel操作的基于yaml的启动器
 class Boot(YamlBoot):
@@ -48,6 +49,7 @@ class Boot(YamlBoot):
             'unmerge_cells': self.unmerge_cells,
             'insert_image': self.insert_image,
             'insert_file': self.insert_file,
+            'insert_plot': self.insert_plot,
         }
         self.add_actions(actions)
 
@@ -584,6 +586,19 @@ class Boot(YamlBoot):
             # 重新打开openpyxl
             self.reload_wb()
             self.reload_ws()
+
+    # 插入plot绘图
+    def insert_plot(self, config):
+        for bound, opt in config.items():
+            # 获得df的变量
+            var_df = opt["df"] # df变量名
+            del opt["df"]
+            df = self.get_var_DataFrame(var_df) # df
+            # 绘图
+            file = plt.plot(df, **opt)
+            # 添加图片
+            img = Image(file)
+            self.ws.add_image(img, bound)
 
 # cli入口
 def main():
