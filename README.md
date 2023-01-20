@@ -18,7 +18,7 @@
 
 但是大部分伙伴开发能力不足，因此创作了ExcelBoot工具，支持通过yaml配置excel生成步骤（虽然不用写代码，但还是需要写yaml，还是有一定的学习门槛）；
 
-框架通过编写简单的yaml, 就可以执行一系列复杂的excel操作步骤, 如sql查询/sql导出/列变换/定位行、列、单元格/设置样式/修改行高列宽/增删行列/合并单元格/插入图片/插入文件/打印变量等，极大的简化了伙伴编写自动化测试脚本的工作量与工作难度，大幅提高人效；
+框架通过编写简单的yaml, 就可以执行一系列复杂的excel操作步骤, 如sql查询/sql导出/列变换/定位行、列、单元格/设置样式/修改行高列宽/增删行列/合并单元格/插入图片/插入文件/插入plot绘图/打印变量等，极大的简化了伙伴编写自动化测试脚本的工作量与工作难度，大幅提高人效；
 
 框架通过提供类似python`for`/`if`/`break`语义的步骤动作，赋予伙伴极大的开发能力与灵活性，能适用于广泛的测试场景。
 
@@ -89,11 +89,12 @@ WHERE
 
 每个步骤里有多个动作(如switch_sheet/export_df)，如果动作有重名，就另外新开一个步骤写动作，这是由yaml语法限制导致的，但不影响步骤执行。
 
-简单贴出1个demo
+简单贴出2个demo
 1. 导出数据库中的表与字段: 详见 [example/step-dbschema.yml](example/step-dbschema.yml)
-```yaml
 
-```
+2. 根据sql来生成各种plot绘图, 支持1 line 折线图 2 bar 柱形图 3 barh 横向条形图 4 hist 直方图 5 box 箱线图 6 kde 核密度图 7 pie 饼图;
+详见 [example/step-plot.yml](example/step-plot.yml)
+![plot绘图](img/plot.png)
 
 ## 配置详解
 支持通过yaml来配置执行的步骤;
@@ -333,7 +334,18 @@ row独有的样式
     C1: c.txt
 ```
 
-24. for: 循环; 
+24. insert_plot: 插入plot绘图, 根据 DataFrame 数据来生成绘图, 图形类型支持: 1 line 折线图 2 bar 柱形图 3 barh 横向条形图 4 hist 直方图 5 box 箱线图 6 kde 核密度图 7 pie 饼图 
+```yaml
+# 插入plot绘图
+- insert_plot:
+    A1:
+      df: prices # DataFrame类型的变量名
+      kind: bar # 图形类型支持: 1 line 折线图 2 bar 柱形图 3 barh 横向条形图 4 hist 直方图 5 box 箱线图 6 kde 核密度图 7 pie 饼图
+      x: 日期 # x轴列名
+      y: 成交量 # y轴列名,支持多个,用逗号分割,可省(即为所有列)
+```
+
+25. for: 循环; 
 for动作下包含一系列子步骤，表示循环执行这系列子步骤；变量`for_i`记录是第几次迭代（从1开始）,变量`for_v`记录是每次迭代的元素值（仅当是list类型的变量迭代时有效）
 ```yaml
 # 循环3次
@@ -354,7 +366,7 @@ for:
     switch_sheet: test
 ```
 
-25. once: 只执行一次，等价于 `for(1)`; 
+26. once: 只执行一次，等价于 `for(1)`; 
 once 结合 moveon_if，可以模拟 python 的 `if` 语法效果
 ```yaml
 once:
@@ -363,24 +375,24 @@ once:
     switch_sheet: test
 ```
 
-26. break_if: 满足条件则跳出循环; 
+27. break_if: 满足条件则跳出循环; 
 只能定义在for/once循环的子步骤中
 ```yaml
 break_if: for_i>2 # 条件表达式，python语法
 ```
 
-27. moveon_if: 满足条件则往下走，否则跳出循环; 
+28. moveon_if: 满足条件则往下走，否则跳出循环; 
 只能定义在for/once循环的子步骤中
 ```yaml
 moveon_if: for_i<=2 # 条件表达式，python语法
 ```
 
-28. include: 包含其他步骤文件，如记录公共的步骤，或记录配置数据(如用户名密码); 
+29. include: 包含其他步骤文件，如记录公共的步骤，或记录配置数据(如用户名密码); 
 ```yaml
 include: part-common.yml
 ```
 
-29. set_vars: 设置变量; 
+30. set_vars: 设置变量; 
 ```yaml
 set_vars:
   name: shi
@@ -388,7 +400,7 @@ set_vars:
   birthday: 5-27
 ```
 
-30. print_vars: 打印所有变量; 
+31. print_vars: 打印所有变量; 
 ```yaml
 print_vars:
 ```

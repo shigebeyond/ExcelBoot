@@ -1,0 +1,52 @@
+# 连接db
+- connect_db:
+    ip: localhost
+    port: 3306
+    dbname: stock
+    user: root
+    password: root
+    echo_sql: true
+# 开始编辑excel
+- start_edit: data/stock绘图.xlsx
+# 切换sheet
+- switch_sheet: 日线
+# 查sql, 结果放到变量tables中
+- query_db:
+    prices: SELECT DATE_FORMAT(日期,"%Y%m") as 日期,收盘,成交量 FROM stock_price_month WHERE 代码 = '000009'
+# 插入plot绘图
+- insert_plot:
+    A1:
+      df: prices
+      kind: bar
+      x: 日期
+      # y: 收盘 # y轴列名,支持多个,用逗号分割,可省(即为所有列)
+      subplots: true # 每个列各自绘制子图
+    A25:
+      df: prices
+      kind: line
+      x: 日期
+      y: 收盘
+    P1:
+      df: prices
+      kind: pie
+      x: 日期
+    F1:
+      df: prices
+      kind: barh
+      x: 日期
+      y: 成交量
+    F25:
+      df: prices
+      kind: hist
+      x: 日期
+    K1:
+      df: prices
+      kind: box
+      x: 日期
+    K25:
+      df: prices
+      kind: kde
+      x: 日期
+      subplots: true # 每个列各自绘制子图
+# 结束编辑excel（保存）
+- end_edit:
