@@ -13,6 +13,7 @@
 7. 从json url中读取数据，加工，并导出为excel
 8. 从库、excel、json url等多个数据源中读取数据，加工，并导出为excel
 9. 各种样式调整，如列宽、行高、字体、颜色等等
+10. 根据数据库数据来生成绘图, 如折线图/条形图/饼图等
 
 这些excel制作的工作繁杂，而且重复性高，可以考虑通过写代码(python)方式来生成excel；
 
@@ -92,7 +93,7 @@ WHERE
 简单贴出2个demo
 1. 导出数据库中的表与字段: 详见 [example/step-dbschema.yml](example/step-dbschema.yml)
 
-2. 根据sql来生成各种plot绘图, 支持1 line 折线图 2 bar 柱形图 3 barh 横向条形图 4 hist 直方图 5 box 箱线图 6 kde 核密度图 7 pie 饼图;
+2. 根据sql来生成各种plot绘图, 支持1 line 折线图 2 bar 条形图 3 barh 横向条形图 4 hist 直方图 5 box 箱线图 6 kde 核密度图 7 pie 饼图;
 详见 [example/step-plot.yml](example/step-plot.yml)
 ![plot绘图](img/plot.png)
 
@@ -334,13 +335,13 @@ row独有的样式
     C1: c.txt
 ```
 
-24. insert_plot: 插入plot绘图, 根据 DataFrame 数据来生成绘图, 图形类型支持: 1 line 折线图 2 bar 柱形图 3 barh 横向条形图 4 hist 直方图 5 box 箱线图 6 kde 核密度图 7 pie 饼图 
+24. insert_plot: 插入plot绘图, 根据 DataFrame 数据来生成绘图, 图形类型支持: 1 line 折线图 2 bar 条形图 3 barh 横向条形图 4 hist 直方图 5 box 箱线图 6 kde 核密度图 7 pie 饼图 
 ```yaml
 # 插入plot绘图
 - insert_plot:
     A1:
       df: prices # DataFrame类型的变量名
-      kind: bar # 图形类型支持: 1 line 折线图 2 bar 柱形图 3 barh 横向条形图 4 hist 直方图 5 box 箱线图 6 kde 核密度图 7 pie 饼图
+      kind: bar # 图形类型支持: 1 line 折线图 2 bar 条形图 3 barh 横向条形图 4 hist 直方图 5 box 箱线图 6 kde 核密度图 7 pie 饼图
       x: 日期 # x轴列名
       y: 成交量 # y轴列名,支持多个,用逗号分割,可省(即为所有列)
 ```
