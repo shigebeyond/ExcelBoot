@@ -4,7 +4,7 @@ from .styleable_wrapper import StyleableWrapper
 from .boot import Boot
 
 __author__ = "shigebeyond"
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __description__ = "ExcelBoot: make an easy way (yaml) to auto generate excel"
 
 __all__ = [
