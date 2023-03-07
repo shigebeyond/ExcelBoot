@@ -34,6 +34,12 @@
 4. 支持类似python`for`/`if`/`break`语义的步骤动作，灵活适应各种场景
 5. 支持`include`引用其他的yaml配置文件，以便解耦与复用
 
+## 同类yaml驱动框架
+[HttpBoot](https://github.com/shigebeyond/HttpBoot)
+[SeleniumBoot](https://github.com/shigebeyond/SeleniumBoot)
+[AppiumBoot](https://github.com/shigebeyond/AppiumBoot)
+[MiniumBoot](https://github.com/shigebeyond/MiniumBoot)
+
 ## todo
 1. 支持更多的动作
 
