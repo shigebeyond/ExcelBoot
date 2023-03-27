@@ -47,6 +47,11 @@
 - cells(1): # 影响行中有值的单元格，没值的不影响
     fill: lightskyblue
 
+- insert_image:
+    F1:
+      image: data/test.jpg
+      size: 100,90 # 宽度,高度
+
 # 每个表插入sheet
 - for(tables[表名]):
       - switch_sheet: $for_v
