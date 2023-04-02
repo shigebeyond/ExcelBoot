@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 import pandas as pd
 import sys
 import datetime
-from pyutilb import log
+from pyutilb.log import log
 
 # db类
 class Db:

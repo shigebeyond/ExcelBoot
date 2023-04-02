@@ -4,7 +4,8 @@
 import fnmatch
 import os
 from pyutilb.util import *
-from pyutilb import log, YamlBoot, BreakException
+from pyutilb import YamlBoot, BreakException
+from pyutilb.log import log
 import pandas as pd
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.utils.cell import column_index_from_string, get_column_letter, range_boundaries
