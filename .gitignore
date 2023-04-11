@@ -8,5 +8,6 @@ build/
 ExcelBoot.egg-info/
 dist/
 boot.log*
+stat.yml
 data/
 tmp/
