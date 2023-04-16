@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from pyutilb.util import *
+from pyutilb.file import *
 from openpyxl.styles.styleable import StyleableObject
 from openpyxl.cell import Cell, MergedCell
 from openpyxl.worksheet.dimensions import ColumnDimension, RowDimension

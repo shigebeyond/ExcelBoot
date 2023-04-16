@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from pyutilb.util import *
+from pyutilb.file import *
 import pandas as pd
 
 # DataFrame的列变换器
