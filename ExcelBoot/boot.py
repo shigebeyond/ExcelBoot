@@ -37,6 +37,8 @@ class Boot(YamlBoot):
             'switch_sheet': self.switch_sheet,
             'connect_db': self.connect_db,
             'query_db': self.query_db,
+            'read_csv': self.read_csv,
+            'read_json': self.read_json,
             'export_df': self.export_df,
             'export_db': self.export_db,
             'map_df_cols': self.map_df_cols,
@@ -113,6 +115,20 @@ class Boot(YamlBoot):
     # 连接db
     def connect_db(self, config):
         self.db = Db(config['ip'], config['port'], config['dbname'], config['user'], config['password'], config['echo_sql'])
+
+    # 读csv数据
+    def read_csv(self, config):
+        for var, file in config.items():
+            # 读csv数据
+            df = read_csv(file)
+            set_var(var, df)
+
+    # 读json数据
+    def read_json(self, config):
+        for var, file in config.items():
+            # 读json数据
+            df = read_json(file)
+            set_var(var, df)
 
     # 查询db
     def query_db(self, config):
