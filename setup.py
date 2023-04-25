@@ -30,7 +30,9 @@ setup(
     description=meta['description'],
     long_description=long_description,
     long_description_content_type="text/markdown",
-    packages=find_packages(),
+    packages=['ExcelBoot'],
+    package_dir={'ExcelBoot': 'ExcelBoot'},
+    package_data={"ExcelBoot": ["simhei.ttf"]},  # 默认是不带py之外的文件，因此要主动声明带上
     include_package_data=True,
     zip_safe=False,
     python_requires=">=3.6",
