@@ -38,6 +38,7 @@ class Boot(YamlBoot):
             'connect_db': self.connect_db,
             'query_db': self.query_db,
             'read_csv': self.read_csv,
+            'read_excel': self.read_excel,
             'read_json': self.read_json,
             'export_df': self.export_df,
             'export_db': self.export_db,
@@ -121,6 +122,14 @@ class Boot(YamlBoot):
         for var, file in config.items():
             # 读csv数据
             df = read_csv(file)
+            set_var(var, df)
+
+    # 读excel数据
+    def read_excel(self, config):
+        for var, file_and_sheet in config.items():
+            file, sheet = file_and_sheet.split(',')
+            # 读excel数据
+            df = read_excel(file, sheet_name=sheet)
             set_var(var, df)
 
     # 读json数据
@@ -443,7 +452,8 @@ class Boot(YamlBoot):
             return
 
         # 2 单值
-        return [bound]
+        # return [bound] # wrong，在存在yield的情况下，不能直接return列表，只能也跟着yield
+        yield bound
 
     # 迭代指定范围内的单元格的值
     def iterate_cell_values(self, bound):
