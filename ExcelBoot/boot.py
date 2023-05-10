@@ -621,10 +621,12 @@ class Boot(YamlBoot):
         for bound, opt in config.items():
             # 获得df的变量
             var_df = opt["df"] # df变量名
-            del opt["df"]
             df = self.get_var_DataFrame(var_df) # df
+            # opt中除了df属性之外，其他属性都作为绘图的参数
+            plot_opt = opt.copy()
+            del plot_opt["df"]
             # 绘图
-            file = plt.plot(df, **opt)
+            file = plt.plot(df, **plot_opt)
             # 添加图片
             img = Image(file)
             self.ws.add_image(img, bound)

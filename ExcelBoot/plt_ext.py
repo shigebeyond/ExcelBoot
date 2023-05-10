@@ -179,7 +179,7 @@ def plot(df, **kwargs):
 
     # 1 准备参数
     # 1.1 指定y轴用到的几个列
-    if 'y' in kwargs:
+    if kwargs.get('y') != None:
         kwargs['y'] = kwargs['y'].split(',')
     # 1.2 不同图的默认参数
     default_args = {}

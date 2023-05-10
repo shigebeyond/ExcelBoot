@@ -25,8 +25,6 @@ def df2open():
 
     wb.save("../data/pandas.xlsx")
 
-    pd.read_csv
-
 # openpyxl 转 df
 def open2df():
     print('openpyxl 转 df')
