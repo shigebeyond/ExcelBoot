@@ -174,7 +174,7 @@ class Boot(YamlBoot):
         else:
             type = "列表变量"
         if len(df) == 0:
-            log.debug(f"{type}[{var}]为空, 不用导出excel")
+            log.debug(f"%s[%s]为空, 不用导出excel", type, var)
             return
 
         # df转sheet
@@ -395,10 +395,10 @@ class Boot(YamlBoot):
 
     # 循环对象应用样式
     def do_for_styleable(self, styles, objs, label):
-        log.debug(f"-- Loop start: {label} -- ")
+        log.debug(f"-- Loop start: %s -- ", label)
         for obj in objs:
             StyleableWrapper(obj).use_styles(styles)  # 应用样式
-        log.debug(f"-- Loop finish: {label} -- ")
+        log.debug(f"-- Loop finish: %s -- ", label)
 
     # 迭代指定范围内的行
     def iterate_rows(self, bound):
@@ -646,7 +646,7 @@ def main():
         # 执行yaml配置的步骤
         boot.run(step_files)
     except Exception as ex:
-        log.error(f"Exception occurs: current step file is {boot.step_file}", exc_info = ex)
+        log.error(f"Exception occurs: current step file is %s", boot.step_file, exc_info = ex)
         raise ex
 
 if __name__ == '__main__':
