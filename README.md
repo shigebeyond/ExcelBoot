@@ -394,12 +394,22 @@ break_if: for_i>2 # 条件表达式，python语法
 moveon_if: for_i<=2 # 条件表达式，python语法
 ```
 
-29. include: 包含其他步骤文件，如记录公共的步骤，或记录配置数据(如用户名密码); 
+29. if/else: 满足条件则执行if分支，否则执行else分支
+```yaml
+- set_vars:
+    txt: '进入首页'
+- if(txt=='进入首页'): # 括号中包含的是布尔表达式，如果表达式结果为true，则执行if动作下的子步骤，否则执行else动作下的子步骤
+    - print: '----- 执行if -----'
+  else:
+    - print: '----- 执行else -----'
+```
+
+30. include: 包含其他步骤文件，如记录公共的步骤，或记录配置数据(如用户名密码); 
 ```yaml
 include: part-common.yml
 ```
 
-30. set_vars: 设置变量; 
+31. set_vars: 设置变量; 
 ```yaml
 set_vars:
   name: shi
@@ -407,7 +417,7 @@ set_vars:
   birthday: 5-27
 ```
 
-31. print_vars: 打印所有变量; 
+32. print_vars: 打印所有变量; 
 ```yaml
 print_vars:
 ```
