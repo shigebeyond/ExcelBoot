@@ -19,26 +19,26 @@
 
 但是大部分伙伴开发能力不足，因此创作了ExcelBoot工具，支持通过yaml配置excel生成步骤（虽然不用写代码，但还是需要写yaml，还是有一定的学习门槛）；
 
-框架通过编写简单的yaml, 就可以执行一系列复杂的excel操作步骤, 如sql查询/sql导出/列变换/定位行、列、单元格/设置样式/修改行高列宽/增删行列/合并单元格/插入图片/插入文件/插入plot绘图/打印变量等，极大的简化了伙伴编写自动化测试脚本的工作量与工作难度，大幅提高人效；
+框架通过编写简单的yaml, 就可以执行一系列复杂的excel操作步骤, 如sql查询/sql导出/列变换/定位行、列、单元格/设置样式/修改行高列宽/增删行列/合并单元格/插入图片/插入文件/插入plot绘图/打印变量等，极大的简化了伙伴生成excel的工作量与工作难度，大幅提高人效；
 
-框架通过提供类似python`for`/`if`/`break`语义的步骤动作，赋予伙伴极大的开发能力与灵活性，能适用于广泛的测试场景。
+框架通过提供类似python`for`/`if`/`break`语义的步骤动作，赋予伙伴极大的开发能力与灵活性，能适用于广泛的应用场景。
 
-框架提供`include`机制，用来加载并执行其他的步骤yaml，一方面是功能解耦，方便分工，一方面是功能复用，提高效率与质量，从而推进测试整体的工程化。
+框架提供`include`机制，用来加载并执行其他的步骤yaml，一方面是功能解耦，方便分工，一方面是功能复用，提高效率与质量，从而推进脚本整体的工程化。
 
 ## 特性
 1. 底层excel操作基于 pandas 与 openpyxl 库来实现 
-2. 使用 selenium-requests 扩展来处理post请求与上传请求
-3. 支持通过yaml来配置执行的步骤，简化了生成代码的开发:
+2. 支持通过yaml来配置执行的步骤，简化了生成代码的开发:
 每个步骤可以有多个动作，但单个步骤中动作名不能相同（yaml语法要求）;
 动作代表excel上的一种操作，如switch_sheet/export_df等等;
-4. 支持类似python`for`/`if`/`break`语义的步骤动作，灵活适应各种场景
-5. 支持`include`引用其他的yaml配置文件，以便解耦与复用
+3. 支持类似python`for`/`if`/`break`语义的步骤动作，灵活适应各种场景
+4. 支持`include`引用其他的yaml配置文件，以便解耦与复用
 
 ## 同类yaml驱动框架
 [HttpBoot](https://github.com/shigebeyond/HttpBoot)
 [SeleniumBoot](https://github.com/shigebeyond/SeleniumBoot)
 [AppiumBoot](https://github.com/shigebeyond/AppiumBoot)
 [MiniumBoot](https://github.com/shigebeyond/MiniumBoot)
+[MonitorBoot](https://github.com/shigebeyond/MonitorBoot)
 
 ## todo
 1. 支持更多的动作
